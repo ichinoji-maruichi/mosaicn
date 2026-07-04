@@ -277,7 +277,8 @@
       <dt>Ctrl / ⌘ + S</dt><dd>保存</dd>
       <dt>Delete / Backspace</dt><dd>選択中の画像をリストから削除（確認なし）</dd>
       <dt>Esc</dt><dd>ドラッグ中の範囲選択・ペン操作をキャンセル</dd>
-      <dt>Shift</dt><dd>四角ツールで正方形、円ツールで正円に固定</dd>
+      <dt>Shift + ドラッグ</dt><dd>画像をスクロール（移動）。拡大表示時に使用</dd>
+      <dt>Shift</dt><dd>四角／円ツールでのドラッグ中：正方形・正円に固定</dd>
     </dl>
 
     <h4>ショートカット（設定可能）</h4>
@@ -456,6 +457,7 @@ function undo(){ if (!hist.length) return; ops = hist.pop(); dirty = true; rebui
 function clearAll(){ if (!ops.length) return; pushHist(); ops = []; dirty = true; rebuild(); }
 
 /* --- 入力 --- */
+let panDrag = null; // {startX, startY, startScrollLeft, startScrollTop}
 function pt(e){
   const r = view.getBoundingClientRect();
   return { x: (e.clientX - r.left) * W / r.width,
@@ -481,6 +483,14 @@ view.addEventListener('pointerdown', e => {
   if (cur < 0 || e.button !== 0) return;
   e.preventDefault();
   view.setPointerCapture(e.pointerId);
+  if (e.shiftKey){
+    // Shift+ドラッグ → スクロール（画像移動）
+    panDrag = { startX: e.clientX, startY: e.clientY,
+                startScrollLeft: stageWrap.scrollLeft,
+                startScrollTop:  stageWrap.scrollTop };
+    view.style.cursor = 'grabbing';
+    return;
+  }
   const p = pt(e);
   if (tool === 'pen')       drag = { t:'pen',  bs:blockSize, size:penSize, pts:[p] };
   else if (tool === 'rect') drag = { t:'rect', bs:blockSize, x0:p.x, y0:p.y, x:p.x, y:p.y, w:0, h:0 };
@@ -489,6 +499,11 @@ view.addEventListener('pointerdown', e => {
 });
 view.addEventListener('pointermove', e => {
   if (cur < 0) return;
+  if (panDrag){
+    stageWrap.scrollLeft = panDrag.startScrollLeft - (e.clientX - panDrag.startX);
+    stageWrap.scrollTop  = panDrag.startScrollTop  - (e.clientY - panDrag.startY);
+    return;
+  }
   const p = pt(e);
   hover = p;
   if (drag){
@@ -502,6 +517,11 @@ view.addEventListener('pointermove', e => {
   scheduleOverlay();
 });
 view.addEventListener('pointerup', () => {
+  if (panDrag){
+    panDrag = null;
+    view.style.cursor = tool === 'pen' ? 'none' : 'crosshair';
+    return;
+  }
   if (!drag) return;
   const d = drag; drag = null;
   if (d.t === 'pen') commit(d);
