@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>簡易モザイクツール -モザイくん-</title>
+<style>
+  :root{
+    --silver:#c0c0c0; --hi:#ffffff; --sh:#808080; --dk:#404040;
+    --navy:#000080; --navy2:#1084d0;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:#008080;
+    font-family:"MS PGothic","MS UI Gothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+    font-size:13px; color:#000;
+    display:flex; padding:10px;
+  }
+  .win{
+    flex:1; min-width:0; display:flex; flex-direction:column;
+    background:var(--silver);
+    border:2px solid; border-color:#dfdfdf #000 #000 #dfdfdf;
+    box-shadow: inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--sh);
+    padding:2px;
+  }
+  .titlebar{
+    background:linear-gradient(90deg,var(--navy),var(--navy2));
+    color:#fff; font-weight:bold; padding:3px 8px;
+    display:flex; align-items:center; gap:6px; user-select:none;
+  }
+  .titlebar .tfile{font-weight:normal; opacity:.85; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .toolbar{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+    padding:5px 6px; border-bottom:1px solid var(--sh); box-shadow:0 1px 0 var(--hi);
+  }
+  .sep{width:0; border-left:1px solid var(--sh); border-right:1px solid var(--hi); align-self:stretch; margin:0 3px;}
+  button,select,input[type=text]{font:inherit;}
+  button{
+    background:var(--silver); border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
+    padding:2px 10px; min-height:24px; cursor:pointer;
+  }
+  button:active:not(:disabled), button.active{
+    border-color:var(--dk) var(--hi) var(--hi) var(--dk); background:#b5b5b5;
+  }
+  button.active{font-weight:bold;}
+  button:disabled{color:var(--sh); text-shadow:1px 1px 0 var(--hi); cursor:default;}
+  button:focus-visible{outline:1px dotted #000; outline-offset:-4px;}
+  select,input[type=text]{
+    background:#fff; border:2px solid; border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+    padding:2px 4px; min-height:24px;
+  }
+  input[type=range]{accent-color:var(--navy); vertical-align:middle; width:110px;}
+  label{display:inline-flex; align-items:center; gap:4px; white-space:nowrap;}
+  .val{display:inline-block; min-width:2.5em; text-align:right; font-variant-numeric:tabular-nums;}
+  .preview{color:#333; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .hint{color:#444;}
+
+  .main{flex:1; min-height:0; display:flex; gap:4px; padding:4px;}
+  .filelist{
+    width:200px; flex:none; overflow:auto; background:#fff;
+    border:2px solid; border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+  }
+  .filelist .empty{color:var(--sh); padding:6px;}
+  .frow{
+    padding:3px 6px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    user-select:none;
+  }
+  .frow:hover{background:#dbe4f0;}
+  .frow.cur{background:var(--navy); color:#fff;}
+  .frow .chk{color:#008000;} .frow.cur .chk{color:#8f8;}
+
+  /* --- ステージ：アスペクト比を保つ表示 --- */
+  .stagewrap{
+    flex:1; min-width:0; position:relative;
+    display:flex;
+    align-items:safe center; justify-content:safe center;
+    overflow:auto;
+    background:#7a7a7a;
+    border:2px solid; border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+  }
+  .dropzone{
+    position:absolute; inset:14px; display:flex; flex-direction:column; gap:8px;
+    align-items:center; justify-content:center; text-align:center;
+    color:#eee; border:2px dashed #cfcfcf; cursor:pointer; font-size:16px;
+  }
+  .dropzone small{font-size:12px; color:#ccc;}
+  .stage{position:relative; display:block; flex:none;}
+  #view{
+    display:block; width:100%; height:100%;
+    background:repeating-conic-gradient(#cfcfcf 0% 25%, #ffffff 0% 50%) 0 0 / 16px 16px;
+    touch-action:none;
+  }
+  #ovl{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+
+  .statusbar{display:flex; gap:3px; padding:3px 4px 4px;}
+  .cell{
+    border:1px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh);
+    padding:2px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .grow{flex:1; min-width:0;}
+
+  #dragOverlay{
+    position:fixed; inset:0; z-index:99; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,128,.35); color:#fff; font-size:24px; font-weight:bold;
+    border:4px dashed #fff; pointer-events:none;
+  }
+
+  /* --- キー設定ダイアログ --- */
+  dialog.dlg{
+    background:var(--silver); color:#000; padding:2px; min-width:300px;
+    border:2px solid; border-color:#dfdfdf #000 #000 #dfdfdf;
+    box-shadow: inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--sh), 4px 4px 12px rgba(0,0,0,.5);
+  }
+  dialog.dlg::backdrop{ background:rgba(0,0,64,.35); }
+  .titlebar .xbtn{
+    margin-left:auto; width:22px; height:20px;
+    padding:0; min-height:0;
+    background:var(--silver);
+    border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
+    color:#000; font-weight:bold; font-size:14px; line-height:1;
+    display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .titlebar .xbtn:active{ border-color:var(--dk) var(--hi) var(--hi) var(--dk); }
+  .titlebar .xbtn:focus-visible{ outline:1px dotted #000; outline-offset:-4px; }
+  .dlgbody{ padding:10px 12px 12px; }
+  .krow{ display:flex; align-items:center; justify-content:space-between; margin:6px 0; gap:12px; }
+  .kbtn{ min-width:110px; font-family:"Consolas","MS Gothic",monospace; }
+  .kbtn.rec{ background:#ffe6a8; }
+  .dlgfoot{ display:flex; justify-content:flex-end; gap:6px; margin-top:12px; padding-top:8px; border-top:1px solid var(--sh); box-shadow:0 -1px 0 var(--hi) inset;}
+  .warn{ color:#a00; min-height:1.2em; font-size:12px; }
+
+  /* ヘルプ */
+  .helpbody{ width:min(560px, 92vw); max-height:70vh; overflow:auto; padding-right:14px; }
+  .helpbody h4{
+    margin:14px 0 6px; font-size:12px; padding:3px 8px;
+    background:linear-gradient(90deg,var(--navy),var(--navy2)); color:#fff;
+  }
+  .helpbody h4:first-child{ margin-top:0; }
+  .helpbody ul{ margin:4px 0 8px; padding-left:20px; }
+  .helpbody li{ margin:3px 0; line-height:1.5; }
+  .helpbody dl{ margin:4px 0 8px; display:grid; grid-template-columns:max-content 1fr; gap:4px 12px; align-items:baseline; }
+  .helpbody dt{
+    font-family:"Consolas","MS Gothic",monospace; font-size:12px;
+    background:#e8e8e8; padding:2px 8px; white-space:nowrap;
+    border:1px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
+  }
+  .helpbody dd{ margin:0; }
+  .helpbody code, .helpbody kbd{
+    font-family:"Consolas","MS Gothic",monospace; background:#e8e8e8;
+    padding:0 4px; border:1px solid var(--sh); font-size:12px;
+  }
+  .helpbody b{ font-weight:bold; }
+  .helpbody p{ margin:4px 0 6px; }
+
+  [hidden]{display:none !important;}
+  @media (max-width:720px){
+    body{padding:4px;}
+    .main{flex-direction:column;}
+    .filelist{width:auto; height:88px;}
+    .preview{max-width:100%;}
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .frow{transition:background .08s;}
+  }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="titlebar"><span aria-hidden="true">▦</span>簡易モザイクツール -モザイくん-<span class="tfile" id="tbFile"></span></div>
+
+  <div class="toolbar">
+    <button id="btnOpen" title="画像ファイルを選択（複数可）">画像を開く...</button>
+    <span class="sep"></span>
+    <button class="tool active" data-tool="pen" title="ドラッグした所にモザイク">ペン</button>
+    <button class="tool" data-tool="rect" title="ドラッグで四角範囲を選択（Shiftで正方形）">四角</button>
+    <button class="tool" data-tool="ell" title="ドラッグで円範囲を選択（Shiftで正円）">円</button>
+    <span class="sep"></span>
+    <label>粒度 <input type="range" id="rngBlock" min="2" max="64" value="12"><span class="val" id="valBlock">12</span></label>
+    <label>ペン <input type="range" id="rngPen" min="4" max="200" value="40"><span class="val" id="valPen">40</span></label>
+    <span class="sep"></span>
+    <button id="btnUndo" title="Ctrl+Z">元に戻す</button>
+    <button id="btnClear" title="全てのモザイクを削除">全消去</button>
+  </div>
+
+  <div class="toolbar">
+    <label>保存名:
+      <select id="affixPos">
+        <option value="suffix" selected>末尾</option>
+        <option value="prefix">文頭</option>
+      </select>
+      <input type="text" id="affixText" value="_mz" size="7">
+    </label>
+    <span class="preview" id="savePreview"></span>
+    <button id="btnSave" title="PNG保存">PNG保存</button>
+    <button id="btnSaveNext" title="保存後、次のファイルへ">保存して次へ</button>
+    <span class="sep"></span>
+    <button id="btnPrev">◀ 前</button>
+    <span class="val" id="pos">-/-</span>
+    <button id="btnNext">次 ▶</button>
+    <span class="sep"></span>
+    <button id="btnZoomOut" title="縮小">−</button>
+    <button id="btnZoomFit" title="ウィンドウに合わせる"><span id="valZoom">100%</span></button>
+    <button id="btnZoomIn" title="拡大">＋</button>
+    <span class="sep"></span>
+    <button id="btnKeys" title="キーボードショートカット設定">キー設定...</button>
+    <button id="btnHelp" title="使い方・ショートカット一覧">ヘルプ</button>
+  </div>
+
+  <div class="main">
+    <div class="filelist" id="fileList" aria-label="ファイル一覧"><div class="empty">ファイルなし</div></div>
+    <div class="stagewrap" id="stageWrap">
+      <div class="dropzone" id="dropZone" role="button" tabindex="0">
+        ここに画像をドロップ<br><small>クリックしてファイルを選択（複数可）</small>
+      </div>
+      <div class="stage" id="stage" hidden>
+        <canvas id="view"></canvas>
+        <canvas id="ovl"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span class="cell grow" id="stInfo">画像を読み込んでください</span>
+    <span class="cell" id="stKeys" title="現在のキー割り当て"></span>
+    <span class="cell" id="stZoom">表示: -</span>
+    <span class="cell" id="stOps">モザイク: 0</span>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple hidden>
+<div id="dragOverlay" hidden>ドロップして追加</div>
+
+<dialog id="dlgHelp" class="dlg" aria-label="ヘルプ">
+  <div class="titlebar"><span>ヘルプ - 使い方とショートカット</span><button type="button" class="xbtn" aria-label="閉じる" title="閉じる">×</button></div>
+  <div class="dlgbody helpbody">
+    <h4>基本操作</h4>
+    <ul>
+      <li><b>画像を開く</b>：「画像を開く...」ボタン、またはウィンドウ内へ<b>ドラッグ&amp;ドロップ</b>。複数ファイルまとめて開けます。</li>
+      <li><b>ファイル切替</b>：左のファイル一覧をクリック、「◀前」「次▶」ボタン、または割り当てキー。</li>
+      <li>ファイル一覧の <span style="color:#008000;font-weight:bold;">✔</span> は保存済みのしるしです。</li>
+      <li>画像を切り替えるとモザイクはリセットされます（未保存なら確認ダイアログが出ます）。</li>
+    </ul>
+
+    <h4>モザイクを付ける</h4>
+    <ul>
+      <li><b>ペン</b>：ドラッグしたところにリアルタイムでモザイク。ペンサイズを変更できます。</li>
+      <li><b>四角</b> / <b>円</b>：ドラッグで範囲を選択してモザイクを適用。<kbd>Shift</kbd>を押しながらで正方形／正円になります。</li>
+      <li><b>粒度</b>：モザイクの粗さ（2〜64px）。操作ごとに固定なので、後から粒度を変えても既存モザイクは変わりません。</li>
+      <li><b>ペンサイズ</b>：4〜200px。ペン選択時はカーソルにサイズのリングが出ます。</li>
+    </ul>
+
+    <h4>編集</h4>
+    <ul>
+      <li><b>元に戻す</b>：直前の操作を取り消します。<b>全消去も戻せます</b>（履歴は最大200件）。</li>
+      <li><b>全消去</b>：全てのモザイクを削除。</li>
+    </ul>
+
+    <h4>保存</h4>
+    <ul>
+      <li>PNG形式で保存します。透明部分はそのまま保持されます。</li>
+      <li>ファイル名：元の名前の<b>文頭</b>または<b>末尾</b>に文字を追加（デフォルト末尾 <code>_mz</code>）。ツールバーに保存名プレビューが出ます。</li>
+      <li><b>保存して次へ</b>：保存後に自動で次のファイルへ移動。連続作業向け。</li>
+    </ul>
+
+    <h4>表示</h4>
+    <ul>
+      <li><b>拡大 / 縮小</b>：＋／−ボタン、または割り当てキー。10〜800%までズーム。</li>
+      <li><b>適合</b>：真ん中のパーセント表示ボタンをクリックすると、ウィンドウにフィットするサイズに戻ります。</li>
+      <li>拡大時はステージ内をスクロールできます。画像を切り替えると自動で「適合」に戻ります。</li>
+    </ul>
+
+    <h4>ショートカット（固定）</h4>
+    <dl>
+      <dt>Ctrl / ⌘ + Z</dt><dd>元に戻す</dd>
+      <dt>Ctrl / ⌘ + S</dt><dd>保存</dd>
+      <dt>Delete / Backspace</dt><dd>選択中の画像をリストから削除（確認なし）</dd>
+      <dt>Esc</dt><dd>ドラッグ中の範囲選択・ペン操作をキャンセル</dd>
+      <dt>Shift</dt><dd>四角ツールで正方形、円ツールで正円に固定</dd>
+    </dl>
+
+    <h4>ショートカット（設定可能）</h4>
+    <p class="hint">「キー設定...」ボタンから変更できます。設定はブラウザに保存され、次回起動時も維持されます。</p>
+    <dl id="customKeysList"></dl>
+
+    <h4>Tips</h4>
+    <ul>
+      <li>複数ファイルをまとめて開けば、キーで送り／戻ししながら次々作業できます。</li>
+      <li>「保存して次へ」を割り当てキー未対応の作業でも、<b>PNG保存</b>＋<b>次へ送り</b>のキーを続けて押せば同じ動きにできます。</li>
+      <li>粒度を粗くする→広範囲を大胆に、細かくする→ピンポイントに、という使い分けができます。</li>
+    </ul>
+  </div>
+</dialog>
+
+<dialog id="dlgKeys" class="dlg" aria-label="キーボードショートカット">
+  <div class="titlebar"><span>キーボードショートカット</span><button type="button" class="xbtn" aria-label="閉じる" title="閉じる">×</button></div>
+  <div class="dlgbody">
+    <p class="hint" style="margin:0 0 8px;">ボタンをクリックしてから、割り当てるキーを1つ押してください。<br>Escで取消。修飾キー（Ctrl/Alt/Shift）は使えません。</p>
+    <div class="krow"><span>前のファイルへ</span><button type="button" class="kbtn" data-act="prev"></button></div>
+    <div class="krow"><span>次のファイルへ</span><button type="button" class="kbtn" data-act="next"></button></div>
+    <div class="krow"><span>縮小</span><button type="button" class="kbtn" data-act="zoomOut"></button></div>
+    <div class="krow"><span>拡大</span><button type="button" class="kbtn" data-act="zoomIn"></button></div>
+    <div class="krow"><span>保存</span><button type="button" class="kbtn" data-act="save"></button></div>
+    <div class="warn" id="keyWarn"></div>
+    <div class="dlgfoot">
+      <button type="button" id="btnKeyReset">初期値に戻す</button>
+      <button type="button" id="btnKeyClose">閉じる</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const view = $('view'), ovl = $('ovl'), stage = $('stage'), stageWrap = $('stageWrap');
+const vctx = view.getContext('2d'), octx = ovl.getContext('2d');
+const base = document.createElement('canvas'), bctx = base.getContext('2d');
+const maskC = document.createElement('canvas'), mctx = maskC.getContext('2d');
+const tmpC = document.createElement('canvas'), tctx = tmpC.getContext('2d');
+const dlgKeys = $('dlgKeys');
+
+let W = 0, H = 0;
+let files = [], cur = -1;
+let dirty = false;
+let ops = [], hist = [];
+const mosCache = new Map();
+let tool = 'pen', blockSize = 12, penSize = 40;
+let drag = null, hover = null, raf = 0;
+
+/* --- ズーム --- */
+const ZOOM_LEVELS = [0.1, 0.15, 0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8];
+let zoomMode = 'fit';   // 'fit' | 'manual'
+let zoomIdx = 7;        // ZOOM_LEVELS[7] = 1.0
+
+function getFitScale(){
+  const r = stageWrap.getBoundingClientRect();
+  const availW = Math.max(20, r.width - 8);
+  const availH = Math.max(20, r.height - 8);
+  return Math.min(availW / W, availH / H, 1);
+}
+function currentZoom(){
+  return zoomMode === 'fit' ? getFitScale() : ZOOM_LEVELS[zoomIdx];
+}
+function applyLayout(){
+  if (cur < 0) return;
+  const s = currentZoom();
+  const dw = Math.max(1, Math.round(W * s));
+  const dh = Math.max(1, Math.round(H * s));
+  stage.style.width = dw + 'px';
+  stage.style.height = dh + 'px';
+  $('valZoom').textContent = Math.round(s * 100) + '%';
+  updateStatus();
+  scheduleOverlay();
+}
+function zoomIn(){
+  const cur0 = currentZoom();
+  const idx = ZOOM_LEVELS.findIndex(l => l > cur0 + 0.001);
+  if (idx >= 0){ zoomMode = 'manual'; zoomIdx = idx; applyLayout(); }
+}
+function zoomOut(){
+  const cur0 = currentZoom();
+  const fit = getFitScale();
+  let idx = -1;
+  for (let i = 0; i < ZOOM_LEVELS.length; i++){
+    if (ZOOM_LEVELS[i] < cur0 - 0.001) idx = i; else break;
+  }
+  if (idx < 0 || ZOOM_LEVELS[idx] <= fit + 0.001){
+    zoomMode = 'fit';
+  } else {
+    zoomMode = 'manual'; zoomIdx = idx;
+  }
+  applyLayout();
+}
+function zoomFit(){ zoomMode = 'fit'; applyLayout(); }
+
+/* --- モザイク生成 --- */
+function getMosaic(bs){
+  let m = mosCache.get(bs);
+  if (m) return m;
+  const sw = Math.max(1, Math.ceil(W / bs));
+  const sh = Math.max(1, Math.ceil(H / bs));
+  const s = document.createElement('canvas');
+  s.width = sw; s.height = sh;
+  const sc = s.getContext('2d');
+  sc.imageSmoothingEnabled = true;
+  sc.imageSmoothingQuality = 'high';
+  sc.drawImage(base, 0, 0, sw, sh);
+  m = document.createElement('canvas');
+  m.width = W; m.height = H;
+  const mc = m.getContext('2d');
+  mc.imageSmoothingEnabled = false;
+  mc.drawImage(s, 0, 0, sw, sh, 0, 0, sw * bs, sh * bs);
+  if (mosCache.size >= 6) mosCache.delete(mosCache.keys().next().value);
+  mosCache.set(bs, m);
+  return m;
+}
+
+/* --- 操作描画 --- */
+function drawMaskShape(op){
+  mctx.clearRect(0, 0, W, H);
+  mctx.fillStyle = '#fff';
+  mctx.strokeStyle = '#fff';
+  if (op.t === 'pen'){
+    const p = op.pts;
+    mctx.lineWidth = op.size;
+    mctx.lineCap = 'round';
+    mctx.lineJoin = 'round';
+    mctx.beginPath();
+    if (p.length === 1){
+      mctx.arc(p[0].x, p[0].y, op.size / 2, 0, Math.PI * 2);
+      mctx.fill();
+    } else {
+      mctx.moveTo(p[0].x, p[0].y);
+      for (let i = 1; i < p.length; i++) mctx.lineTo(p[i].x, p[i].y);
+      mctx.stroke();
+    }
+  } else if (op.t === 'rect'){
+    mctx.fillRect(op.x, op.y, op.w, op.h);
+  } else {
+    mctx.beginPath();
+    mctx.ellipse(op.cx, op.cy, op.rx, op.ry, 0, 0, Math.PI * 2);
+    mctx.fill();
+  }
+}
+function renderOp(ctx, op){
+  drawMaskShape(op);
+  tctx.globalCompositeOperation = 'source-over';
+  tctx.clearRect(0, 0, W, H);
+  tctx.drawImage(getMosaic(op.bs), 0, 0);
+  tctx.globalCompositeOperation = 'destination-in';
+  tctx.drawImage(maskC, 0, 0);
+  tctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(tmpC, 0, 0);
+}
+function rebuild(){
+  vctx.clearRect(0, 0, W, H);
+  vctx.drawImage(base, 0, 0);
+  for (const op of ops) renderOp(vctx, op);
+  updateStatus();
+}
+
+/* --- 履歴 --- */
+function pushHist(){ hist.push(ops.slice()); if (hist.length > 200) hist.shift(); }
+function commit(op){
+  pushHist();
+  ops.push(op);
+  renderOp(vctx, op);
+  dirty = true;
+  files[cur].saved = false;
+  renderList();
+  updateStatus();
+}
+function undo(){ if (!hist.length) return; ops = hist.pop(); dirty = true; rebuild(); }
+function clearAll(){ if (!ops.length) return; pushHist(); ops = []; dirty = true; rebuild(); }
+
+/* --- 入力 --- */
+function pt(e){
+  const r = view.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width,
+           y: (e.clientY - r.top)  * H / r.height };
+}
+function updateShape(d, p, shift){
+  let dx = p.x - d.x0, dy = p.y - d.y0;
+  if (shift){
+    const m = Math.max(Math.abs(dx), Math.abs(dy));
+    dx = (dx < 0 ? -1 : 1) * m;
+    dy = (dy < 0 ? -1 : 1) * m;
+  }
+  if (d.t === 'rect'){
+    d.x = Math.min(d.x0, d.x0 + dx);
+    d.y = Math.min(d.y0, d.y0 + dy);
+    d.w = Math.abs(dx); d.h = Math.abs(dy);
+  } else {
+    d.cx = d.x0 + dx / 2; d.cy = d.y0 + dy / 2;
+    d.rx = Math.abs(dx) / 2; d.ry = Math.abs(dy) / 2;
+  }
+}
+view.addEventListener('pointerdown', e => {
+  if (cur < 0 || e.button !== 0) return;
+  e.preventDefault();
+  view.setPointerCapture(e.pointerId);
+  const p = pt(e);
+  if (tool === 'pen')       drag = { t:'pen',  bs:blockSize, size:penSize, pts:[p] };
+  else if (tool === 'rect') drag = { t:'rect', bs:blockSize, x0:p.x, y0:p.y, x:p.x, y:p.y, w:0, h:0 };
+  else                      drag = { t:'ell',  bs:blockSize, x0:p.x, y0:p.y, cx:p.x, cy:p.y, rx:0, ry:0 };
+  scheduleOverlay();
+});
+view.addEventListener('pointermove', e => {
+  if (cur < 0) return;
+  const p = pt(e);
+  hover = p;
+  if (drag){
+    if (drag.t === 'pen'){
+      const last = drag.pts[drag.pts.length - 1];
+      if (Math.hypot(p.x - last.x, p.y - last.y) > 1.5) drag.pts.push(p);
+    } else {
+      updateShape(drag, p, e.shiftKey);
+    }
+  }
+  scheduleOverlay();
+});
+view.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.t === 'pen') commit(d);
+  else if ((d.t === 'rect' && d.w > 1 && d.h > 1) ||
+           (d.t === 'ell'  && d.rx > 1 && d.ry > 1)) commit(d);
+  scheduleOverlay();
+});
+view.addEventListener('pointerleave', () => { hover = null; scheduleOverlay(); });
+
+/* --- オーバーレイ --- */
+function scheduleOverlay(){ if (!raf) raf = requestAnimationFrame(drawOverlay); }
+function drawOverlay(){
+  raf = 0;
+  if (cur < 0) return;
+  octx.clearRect(0, 0, W, H);
+  const rw = view.getBoundingClientRect().width || 1;
+  const lw = Math.max(1, W / rw);
+  if (drag){
+    renderOp(octx, drag);
+    if (drag.t !== 'pen'){
+      octx.save();
+      octx.lineWidth = lw;
+      octx.setLineDash([5 * lw, 4 * lw]);
+      octx.beginPath();
+      if (drag.t === 'rect') octx.rect(drag.x, drag.y, drag.w, drag.h);
+      else octx.ellipse(drag.cx, drag.cy, drag.rx, drag.ry, 0, 0, Math.PI * 2);
+      octx.strokeStyle = '#fff'; octx.stroke();
+      octx.lineDashOffset = 4.5 * lw;
+      octx.strokeStyle = '#000'; octx.stroke();
+      octx.restore();
+    }
+  }
+  if (tool === 'pen' && hover){
+    octx.save();
+    octx.beginPath();
+    octx.arc(hover.x, hover.y, penSize / 2, 0, Math.PI * 2);
+    octx.lineWidth = lw * 2.5; octx.strokeStyle = 'rgba(255,255,255,.9)'; octx.stroke();
+    octx.lineWidth = lw;       octx.strokeStyle = '#000';                 octx.stroke();
+    octx.restore();
+  }
+}
+
+/* --- ファイル --- */
+function addFiles(list){
+  const imgs = [...list].filter(f => f.type.startsWith('image/'));
+  if (!imgs.length) return;
+  const start = files.length;
+  for (const f of imgs) files.push({ file: f, name: f.name, saved: false });
+  renderList();
+  if (cur < 0) switchTo(start, true);
+  else updateAll();
+}
+function confirmDiscard(){
+  return !dirty || confirm('モザイク編集が保存されていません。\n画像を切り替えると編集内容は消えます。よろしいですか？');
+}
+function switchTo(i, skipConfirm){
+  if (i < 0 || i >= files.length || i === cur) return;
+  if (!skipConfirm && !confirmDiscard()) return;
+  cur = i;
+  loadCurrent();
+}
+function deleteCurrent(){
+  if (cur < 0) return;
+  files.splice(cur, 1);
+  if (files.length === 0){
+    cur = -1;
+    ops = []; hist = []; dirty = false; drag = null; hover = null;
+    mosCache.clear();
+    $('stage').hidden = true;
+    $('dropZone').hidden = false;
+    updateAll();
+  } else {
+    if (cur >= files.length) cur = files.length - 1;
+    loadCurrent();
+  }
+}
+function loadCurrent(){
+  const f = files[cur];
+  const url = URL.createObjectURL(f.file);
+  const im = new Image();
+  im.onload = () => {
+    URL.revokeObjectURL(url);
+    W = im.naturalWidth; H = im.naturalHeight;
+    for (const c of [view, ovl, base, maskC, tmpC]){ c.width = W; c.height = H; }
+    bctx.drawImage(im, 0, 0);
+    ops = []; hist = []; mosCache.clear();
+    dirty = false; drag = null; hover = null;
+    zoomMode = 'fit';                       // 画像切替で表示は「適合」にリセット
+    vctx.drawImage(base, 0, 0);
+    $('stage').hidden = false;
+    $('dropZone').hidden = true;
+    applyLayout();
+    updateAll();
+  };
+  im.onerror = () => { URL.revokeObjectURL(url); alert('画像を読み込めませんでした: ' + f.name); };
+  im.src = url;
+}
+function renderList(){
+  const box = $('fileList');
+  box.textContent = '';
+  if (!files.length){
+    const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'ファイルなし';
+    box.appendChild(d); return;
+  }
+  files.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'frow' + (i === cur ? ' cur' : '');
+    row.title = f.name;
+    row.textContent = (i + 1) + '. ' + f.name + ' ';
+    if (f.saved){
+      const c = document.createElement('span'); c.className = 'chk'; c.textContent = '✔';
+      row.appendChild(c);
+    }
+    row.onclick = () => switchTo(i);
+    box.appendChild(row);
+  });
+}
+
+/* --- 保存 --- */
+function outName(){
+  if (cur < 0) return '';
+  const n = files[cur].name.replace(/\.[^.]+$/, '');
+  const a = $('affixText').value;
+  return ($('affixPos').value === 'prefix' ? a + n : n + a) + '.png';
+}
+function save(cb){
+  if (cur < 0) return;
+  view.toBlob(b => {
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = u; a.download = outName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 5000);
+    files[cur].saved = true;
+    dirty = false;
+    renderList();
+    if (cb) cb();
+  }, 'image/png');
+}
+
+/* --- ステータス／UI --- */
+function updateStatus(){
+  if (cur < 0){
+    $('stInfo').textContent = '画像を読み込んでください';
+    $('stZoom').textContent = '表示: -';
+    $('stOps').textContent = 'モザイク: 0';
+    return;
+  }
+  $('stInfo').textContent = files[cur].name + '（' + W + '×' + H + 'px）';
+  const s = currentZoom();
+  $('stZoom').textContent = '表示: ' + Math.round(s * 100) + '%' + (zoomMode === 'fit' ? ' (適合)' : '');
+  $('stOps').textContent = 'モザイク: ' + ops.length;
+}
+function updateAll(){
+  const has = cur >= 0;
+  $('tbFile').textContent = has ? '- ' + files[cur].name : '';
+  $('pos').textContent = has ? (cur + 1) + '/' + files.length : '-/-';
+  $('savePreview').textContent = has ? files[cur].name + ' → ' + outName() : '';
+  for (const id of ['btnUndo','btnClear','btnSave','btnSaveNext','btnPrev','btnNext','btnZoomIn','btnZoomOut','btnZoomFit'])
+    $(id).disabled = !has;
+  if (has){
+    $('btnPrev').disabled = cur <= 0;
+    $('btnNext').disabled = cur >= files.length - 1;
+  }
+  view.style.cursor = tool === 'pen' ? 'none' : 'crosshair';
+  renderKeyStatus();
+  renderList();
+  updateStatus();
+}
+
+/* --- キーボードショートカット --- */
+const DEFAULT_KEYS = { prev:'1', next:'2', zoomOut:'3', zoomIn:'4', save:'5' };
+const ACT_LABEL   = { prev:'前', next:'次', zoomOut:'縮小', zoomIn:'拡大', save:'保存' };
+let keys = { ...DEFAULT_KEYS };
+try {
+  const s = JSON.parse(localStorage.getItem('mzKeys') || 'null');
+  if (s && typeof s === 'object') keys = { ...DEFAULT_KEYS, ...s };
+} catch {}
+function saveKeys(){ try { localStorage.setItem('mzKeys', JSON.stringify(keys)); } catch {} }
+function normKey(e){
+  if (['Control','Shift','Alt','Meta','OS'].includes(e.key)) return null;
+  return e.key.length === 1 ? e.key.toLowerCase() : e.key;
+}
+function keyLabel(k){
+  if (!k) return '(なし)';
+  if (k === ' ') return 'Space';
+  return k.length === 1 ? k.toUpperCase() : k;
+}
+function renderKeyStatus(){
+  $('stKeys').textContent =
+    ACT_LABEL.prev + ':' + keyLabel(keys.prev) +
+    '  ' + ACT_LABEL.next + ':' + keyLabel(keys.next) +
+    '  ' + ACT_LABEL.zoomOut + ':' + keyLabel(keys.zoomOut) +
+    '  ' + ACT_LABEL.zoomIn + ':' + keyLabel(keys.zoomIn) +
+    '  ' + ACT_LABEL.save + ':' + keyLabel(keys.save);
+}
+
+/* キー設定ダイアログ */
+let recording = null;
+function openKeys(){
+  updateKeyButtons(); $('keyWarn').textContent = '';
+  dlgKeys.showModal();
+}
+function updateKeyButtons(){
+  for (const b of document.querySelectorAll('.kbtn')){
+    b.textContent = keyLabel(keys[b.dataset.act]);
+    b.classList.remove('rec');
+  }
+  recording = null;
+}
+document.querySelectorAll('.kbtn').forEach(b => {
+  b.onclick = () => {
+    if (recording) { recording.classList.remove('rec'); recording.textContent = keyLabel(keys[recording.dataset.act]); }
+    recording = b;
+    b.classList.add('rec');
+    b.textContent = '押してください...';
+    $('keyWarn').textContent = '';
+  };
+});
+dlgKeys.addEventListener('keydown', e => {
+  if (!recording) return;
+  if (e.key === 'Escape'){
+    e.preventDefault(); e.stopPropagation();
+    recording.classList.remove('rec');
+    recording.textContent = keyLabel(keys[recording.dataset.act]);
+    recording = null;
+    return;
+  }
+  const k = normKey(e);
+  if (!k) return;                          // 修飾キー単独は無視
+  e.preventDefault(); e.stopPropagation();
+  const act = recording.dataset.act;
+  // 他のアクションと同じキーが割り当てられていたら入れ替え
+  for (const [a, v] of Object.entries(keys)){
+    if (a !== act && v === k){ keys[a] = keys[act]; break; }
+  }
+  keys[act] = k;
+  saveKeys();
+  updateKeyButtons();
+  renderKeyStatus();
+});
+function openHelp(){
+  const el = $('customKeysList');
+  el.textContent = '';
+  const list = [
+    ['prev','前のファイルへ'], ['next','次のファイルへ'],
+    ['zoomOut','縮小'], ['zoomIn','拡大'], ['save','保存']
+  ];
+  for (const [act, label] of list){
+    const dt = document.createElement('dt'); dt.textContent = keyLabel(keys[act]);
+    const dd = document.createElement('dd'); dd.textContent = label;
+    el.appendChild(dt); el.appendChild(dd);
+  }
+  $('dlgHelp').showModal();
+}
+$('btnHelp').onclick = openHelp;
+$('btnKeys').onclick = openKeys;
+// ×ボタンと外側クリックでダイアログを閉じる
+for (const dlg of document.querySelectorAll('dialog.dlg')){
+  const x = dlg.querySelector('.xbtn');
+  if (x) x.onclick = () => dlg.close();
+  dlg.addEventListener('click', e => {
+    const r = dlg.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right ||
+        e.clientY < r.top  || e.clientY > r.bottom) dlg.close();
+  });
+}
+$('btnKeyClose').onclick = () => dlgKeys.close();
+$('btnKeyReset').onclick = () => {
+  if (!confirm('キー設定を初期値に戻しますか？')) return;
+  keys = { ...DEFAULT_KEYS };
+  saveKeys();
+  updateKeyButtons();
+  renderKeyStatus();
+};
+
+/* --- 入力配線 --- */
+$('btnOpen').onclick = () => $('fileInput').click();
+$('dropZone').onclick = () => $('fileInput').click();
+$('dropZone').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') $('fileInput').click(); };
+$('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+
+for (const b of document.querySelectorAll('.tool')){
+  b.onclick = () => {
+    tool = b.dataset.tool;
+    document.querySelectorAll('.tool').forEach(x => x.classList.toggle('active', x === b));
+    view.style.cursor = tool === 'pen' ? 'none' : 'crosshair';
+    scheduleOverlay();
+  };
+}
+$('rngBlock').oninput = e => { blockSize = +e.target.value; $('valBlock').textContent = blockSize; };
+$('rngPen').oninput   = e => { penSize   = +e.target.value; $('valPen').textContent   = penSize; scheduleOverlay(); };
+$('btnUndo').onclick  = undo;
+$('btnClear').onclick = clearAll;
+$('btnSave').onclick  = () => save();
+$('btnSaveNext').onclick = () => save(() => {
+  if (cur < files.length - 1) switchTo(cur + 1, true);
+  else $('stInfo').textContent = files[cur].name + '（' + W + '×' + H + 'px）- 最後のファイルです';
+});
+$('btnPrev').onclick = () => switchTo(cur - 1);
+$('btnNext').onclick = () => switchTo(cur + 1);
+$('btnZoomIn').onclick  = zoomIn;
+$('btnZoomOut').onclick = zoomOut;
+$('btnZoomFit').onclick = zoomFit;
+$('affixText').oninput = updateAll;
+$('affixPos').onchange = updateAll;
+
+window.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) return;
+  if (dlgKeys.open || $('dlgHelp').open) return;
+  const k = normKey(e);
+  if ((e.ctrlKey || e.metaKey) && k === 'z'){ e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 's'){ e.preventDefault(); save(); return; }
+  if (e.key === 'Escape' && drag){ drag = null; scheduleOverlay(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (!k) return;
+  if (k === 'Delete' || k === 'Backspace'){ e.preventDefault(); deleteCurrent(); return; }
+  if (cur < 0 && k !== keys.prev && k !== keys.next) return;
+  if      (k === keys.prev)   { e.preventDefault(); if (cur > 0) switchTo(cur - 1); }
+  else if (k === keys.next)   { e.preventDefault(); if (cur < files.length - 1) switchTo(cur + 1); }
+  else if (k === keys.zoomOut){ e.preventDefault(); zoomOut(); }
+  else if (k === keys.zoomIn) { e.preventDefault(); zoomIn(); }
+  else if (k === keys.save)   { e.preventDefault(); save(); }
+});
+window.addEventListener('resize', () => {
+  if (cur >= 0 && zoomMode === 'fit') applyLayout();
+  updateStatus();
+});
+
+/* ドラッグ&ドロップ（ウィンドウ全体） */
+let dragDepth = 0;
+window.addEventListener('dragenter', e => {
+  if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')){
+    dragDepth++; $('dragOverlay').hidden = false;
+  }
+});
+window.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0){ dragDepth = 0; $('dragOverlay').hidden = true; }
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => {
+  e.preventDefault(); dragDepth = 0; $('dragOverlay').hidden = true;
+  if (e.dataTransfer) addFiles(e.dataTransfer.files);
+});
+
+window.addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+updateAll();
+})();
+</script>
+</body>
+</html>
