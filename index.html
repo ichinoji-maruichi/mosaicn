@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>簡易モザイクツール -モザイくん-</title>
+<title>簡易モザイクルーツ -モザイくん with STP-</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&family=Yuji+Mai&family=Mochiy+Pop+One&family=Cherry+Bomb+One&family=RocknRoll+One&family=Potta+One&family=Darumadrop+One&family=Tsukimi+Rounded&family=New+Tegomin&family=Hachi+Maru+Pop&family=Slackside+One&family=Yusei+Magic&family=Shizuru&family=Yuji+Boku&family=Yomogi&family=Hi+Melody&family=Gamja+Flower&display=swap" rel="stylesheet">
 <style>
   :root{
     --silver:#c0c0c0; --hi:#ffffff; --sh:#808080; --dk:#404040;
@@ -44,6 +47,16 @@
     border-color:var(--dk) var(--hi) var(--hi) var(--dk); background:#b5b5b5;
   }
   button.active{font-weight:bold;}
+  button.btn95sp{
+    background:var(--silver); border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi);
+    padding:2px 10px; min-height:24px; cursor:pointer; font:inherit;
+  }
+  button.btn95sp:active:not(:disabled), button.btn95sp.active{
+    border-color:var(--dk) var(--hi) var(--hi) var(--dk); background:#b5b5b5;
+  }
+  button.btn95sp.active{font-weight:bold;}
+  button.btn95sp:disabled{color:var(--sh); text-shadow:1px 1px 0 var(--hi); cursor:default;}
+  button.btn95sp.compact{ padding:2px 4px; font-size:11px; white-space:nowrap; }
   button:disabled{color:var(--sh); text-shadow:1px 1px 0 var(--hi); cursor:default;}
   button:focus-visible{outline:1px dotted #000; outline-offset:-4px;}
   select,input[type=text]{
@@ -51,16 +64,23 @@
     padding:2px 4px; min-height:24px;
   }
   input[type=range]{accent-color:var(--navy); vertical-align:middle; width:110px;}
+  .spRowInline input[type=range]{ width:100%; }
   label{display:inline-flex; align-items:center; gap:4px; white-space:nowrap;}
   .val{display:inline-block; min-width:2.5em; text-align:right; font-variant-numeric:tabular-nums;}
-  .preview{color:#333; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .hint{color:#444;}
 
   .main{flex:1; min-height:0; display:flex; gap:4px; padding:4px;}
   .filelist{
-    width:200px; flex:none; overflow:auto; background:#fff;
+    width:200px; flex:none; overflow:hidden; background:#fff;
     border:2px solid; border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+    display:flex; flex-direction:column;
   }
+  .filelist .filehint{
+    flex:none; padding:6px; font-size:11px; color:#555; text-align:center;
+    background:#eef4fb; border-bottom:1px dashed var(--sh);
+  }
+  .filelist.dragover .filehint{ background:#cfe4ff; color:#000; font-weight:bold; }
+  #fileList{ flex:1; min-height:0; overflow:auto; }
   .filelist .empty{color:var(--sh); padding:6px;}
   .frow{
     padding:3px 6px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -155,20 +175,106 @@
   .helpbody p{ margin:4px 0 6px; }
 
   [hidden]{display:none !important;}
-  @media (max-width:720px){
+  @media (max-width:960px){
     body{padding:4px;}
     .main{flex-direction:column;}
     .filelist{width:auto; height:88px;}
-    .preview{max-width:100%;}
+    .stampPanel{width:auto; height:280px;}
   }
   @media (prefers-reduced-motion: no-preference){
     .frow{transition:background .08s;}
+  }
+
+  /* ===================== スタンプパネル ===================== */
+  .stampPanel{
+    width:280px; flex:none; overflow-y:auto; overflow-x:hidden;
+    background:var(--silver);
+    border:2px solid; border-color:var(--dk) var(--hi) var(--hi) var(--dk);
+    display:flex; flex-direction:column;
+  }
+  .spTitle{
+    background:linear-gradient(90deg,var(--navy),var(--navy2)); color:#fff;
+    font-size:11px; font-weight:bold; padding:3px 6px;
+  }
+  .spBody{ padding:8px; }
+  .spRow{ margin-bottom:8px; }
+  .spRow label{ display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px; }
+  .spRowInline{ display:flex; gap:6px; align-items:flex-end; }
+  .spRowInline > div{ flex:1; }
+  select.field95, textarea.field95, input.field95{
+    border:2px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh);
+    background:#fff; font-family:inherit; font-size:12px; padding:3px; width:100%; resize:none; box-sizing:border-box;
+  }
+  #spPreviewBox{
+    background-color:#808080;
+    background-image:linear-gradient(45deg,#999 25%,transparent 25%),linear-gradient(-45deg,#999 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#999 75%),linear-gradient(-45deg,transparent 75%,#999 75%);
+    background-size:12px 12px; background-position:0 0,0 6px,6px -6px,-6px 0px;
+    border:2px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh);
+    height:80px; display:flex; align-items:center; justify-content:center; padding:4px; overflow:hidden;
+  }
+  #spPreviewBox img{ max-width:100%; max-height:100%; }
+  #stampTabBar{ display:flex; flex-wrap:wrap; gap:3px; padding:4px 8px 0 8px; }
+  .stampTabBtn{
+    min-width:24px; padding:2px 7px; font-size:11px;
+    background:var(--silver); border:2px solid; border-color:var(--hi) var(--sh) var(--sh) var(--hi);
+    cursor:pointer; font-family:inherit;
+  }
+  .stampTabBtn.active{ background:#dcdcdc; border-color:var(--sh) var(--hi) var(--hi) var(--sh); font-weight:bold; }
+  .stampTabBtn.addTab{ color:#006600; font-weight:bold; }
+
+  #stampGrid{
+    display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:60px; gap:4px; padding:6px;
+    max-height:280px; overflow-y:auto; overflow-x:hidden; background:#fff;
+    margin:0 8px 8px 8px; border:2px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh);
+  }
+  .stampCell{
+    position:relative; width:100%; height:100%; border:1px solid #ccc; cursor:pointer;
+    background:#f8f8f8; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:3px;
+  }
+  .stampCell:hover{ background:#dfefff; border-color:#316ac5; z-index:2; }
+  .stampCell img{ max-width:100%; max-height:100%; }
+  .stampCell .tip{
+    position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+    background:#ffffcc; border:1px solid var(--sh); font-size:10px; padding:2px 5px;
+    white-space:nowrap; display:none; margin-bottom:3px; box-shadow:1px 1px 2px rgba(0,0,0,.3); z-index:5;
+  }
+  .stampCell:hover .tip{ display:block; }
+  .stampCellDel{
+    position:absolute; top:1px; right:1px; width:15px; height:15px;
+    background:#c00000; color:#fff; font-size:9px; text-align:center; line-height:14px;
+    border:1px solid #fff; border-radius:50%; cursor:pointer; display:none; z-index:3;
+  }
+  .stampCell:hover .stampCellDel{ display:block; }
+  .spBtnRow{ display:flex; gap:6px; }
+  .spBtnRow button{ flex:1; }
+
+  /* --- スタンプレイヤー：画像本来のW×Hピクセル座標系を保持し、transform:scaleで表示だけ追従 --- */
+  #stickerLayer{
+    position:absolute; left:0; top:0;
+    transform-origin:0 0;
+    perspective:1000px;
+    pointer-events:none;
+  }
+  .sticker{
+    position:absolute; cursor:move; touch-action:none; transform-origin:0 0; pointer-events:auto;
+    -webkit-user-drag:none; user-select:none;
+  }
+  .sticker img{ display:block; width:100%; height:100%; pointer-events:none; -webkit-user-drag:none; user-select:none; }
+  .sticker.selected{ outline:1px dashed #000; outline-offset:2px; }
+  .cornerHandle{
+    position:absolute; width:12px; height:12px; background:#ffff00; border:1px solid #000;
+    border-radius:50%; cursor:pointer; z-index:6; transform:translate(-50%,-50%); pointer-events:auto;
+  }
+  .rotHandle{ background:#00c853; cursor:grab; }
+  .delHandle{
+    position:absolute; width:16px; height:16px; background:#c00000; color:#fff; font-size:10px;
+    text-align:center; line-height:15px; border:1px solid #fff; cursor:pointer; z-index:7; pointer-events:auto;
   }
 </style>
 </head>
 <body>
 <div class="win">
-  <div class="titlebar"><span aria-hidden="true">▦</span>簡易モザイクツール -モザイくん-<span class="tfile" id="tbFile"></span></div>
+  <div class="titlebar"><span aria-hidden="true">▦</span>簡易モザイクルーツ -モザイくん with STP-<span class="tfile" id="tbFile"></span></div>
 
   <div class="toolbar">
     <button id="btnOpen" title="画像ファイルを選択（複数可）">画像を開く...</button>
@@ -192,6 +298,8 @@
     <span class="sep"></span>
     <button id="btnUndo" title="Ctrl+Z">元に戻す</button>
     <button id="btnClear" title="全てのモザイクを削除">全消去</button>
+    <span class="sep"></span>
+    <span class="hint" id="toolHint" style="font-size:12px;"></span>
   </div>
 
   <div class="toolbar">
@@ -202,7 +310,6 @@
       </select>
       <input type="text" id="affixText" value="_mz" size="7">
     </label>
-    <span class="preview" id="savePreview"></span>
     <button id="btnSave" title="PNG保存">PNG保存</button>
     <button id="btnSaveNext" title="保存後、次のファイルへ">保存して次へ</button>
     <span class="sep"></span>
@@ -219,7 +326,10 @@
   </div>
 
   <div class="main">
-    <div class="filelist" id="fileList" aria-label="ファイル一覧"><div class="empty">ファイルなし</div></div>
+    <div class="filelist" id="fileListWrap" aria-label="ファイル一覧">
+      <div class="filehint" id="fileListHint">📂 ここに画像をドロップして追加</div>
+      <div id="fileList"><div class="empty">ファイルなし</div></div>
+    </div>
     <div class="stagewrap" id="stageWrap">
       <div class="dropzone" id="dropZone" role="button" tabindex="0">
         ここに画像をドロップ<br><small>クリックしてファイルを選択（複数可）</small>
@@ -227,6 +337,119 @@
       <div class="stage" id="stage" hidden>
         <canvas id="view"></canvas>
         <canvas id="ovl"></canvas>
+        <div id="stickerLayer"></div>
+        <div id="dropHintStamp" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#fff; font-size:16px; font-weight:bold; background:rgba(0,0,128,.5); pointer-events:none; z-index:50;">ここに画像をドロップ（はんこ追加）</div>
+      </div>
+    </div>
+
+    <div class="stampPanel" id="stampPanel">
+      <div class="spTitle">擬音スタンプを作る</div>
+      <div class="spBody">
+
+        <div class="spRow">
+          <label>書体</label>
+          <select id="spFont" class="field95">
+            <optgroup label="パンチ・インパクト系">
+              <option value="Cherry Bomb One">チェリーボム</option>
+              <option value="Darumadrop One">だるまどろっぷ</option>
+              <option value="Mochiy Pop One">もちぽっぷ</option>
+              <option value="Potta One">丸太文字</option>
+              <option value="M PLUS Rounded 1c">極太丸ゴシック</option>
+            </optgroup>
+            <optgroup label="筆・墨系">
+              <option value="Yuji Boku">墨太筆</option>
+              <option value="Yuji Mai">流麗筆文字</option>
+              <option value="New Tegomin">手書き教科書体</option>
+            </optgroup>
+            <optgroup label="丸文字・カワイイ系">
+              <option value="Hachi Maru Pop">はちまるポップ</option>
+              <option value="Hi Melody">ハイメロディ</option>
+              <option value="Gamja Flower">ガムジャフラワー</option>
+              <option value="Shizuru">しずる</option>
+              <option value="Tsukimi Rounded">つきみラウンド</option>
+            </optgroup>
+            <optgroup label="勢い・スピード系">
+              <option value="RocknRoll One">ロックンロール</option>
+              <option value="Slackside One">スラックサイド</option>
+            </optgroup>
+            <optgroup label="手書き細字系">
+              <option value="Yusei Magic" selected>手書き細字</option>
+              <option value="Yomogi">柔らか手書き</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="spRow">
+          <label>文字(改行OK)</label>
+          <textarea id="spText" class="field95" rows="2">ドン</textarea>
+        </div>
+
+        <div class="spRow spBtnRow">
+          <button class="btn95sp" id="spBtnVertical" style="flex:1; white-space:nowrap;">縦書き</button>
+          <button class="btn95sp" id="spBtnBold" style="flex:1; white-space:nowrap;">ボールド</button>
+        </div>
+
+        <div class="spRow spRowInline">
+          <div>
+            <label>文字色</label>
+            <input type="color" id="spColor" value="#e60012" style="width:100%; height:24px;">
+          </div>
+          <div>
+            <label>縁取り色</label>
+            <input type="color" id="spStroke" value="#ffffff" style="width:100%; height:24px;">
+          </div>
+        </div>
+
+        <div class="spRow spRowInline">
+          <div>
+            <label>縁の太さ <span id="spStrokeWidthVal">11</span></label>
+            <input type="range" id="spStrokeWidthSlider" min="0" max="30" value="11">
+          </div>
+          <div>
+            <label>不透明度 <span id="spOpVal">100</span>%</label>
+            <input type="range" id="spOpSlider" min="0" max="100" value="100">
+          </div>
+        </div>
+
+        <div class="spRow">
+          <label>プレビュー(選択中のスタンプ、または新規)</label>
+          <div id="spPreviewBox"></div>
+        </div>
+
+        <div class="spRow">
+          <button class="btn95sp" id="spBtnPlace" style="width:100%; font-weight:bold;">➕ 中央に配置</button>
+        </div>
+
+        <div class="spRow" style="font-size:10px; color:#444;">
+          💡 キャンバス上のスタンプは四隅の黄色いハンドルで自由変形(台形も可)、緑ハンドルで回転できます
+        </div>
+
+        <div class="spRow spBtnRow">
+          <button class="btn95sp compact" id="spBtnDup" disabled>複製</button>
+          <button class="btn95sp compact" id="spBtnFront" disabled>最前面</button>
+          <button class="btn95sp compact" id="spBtnResetShape" disabled>変形リセット</button>
+        </div>
+        <div class="spRow spBtnRow">
+          <button class="btn95sp" id="spBtnDelSel" disabled>選択削除</button>
+        </div>
+        <div class="spRow">
+          <button class="btn95sp" id="spBtnSaveToMyPreset" style="width:100%;">⭐ この設定を「よく使うスタンプ」に保存</button>
+        </div>
+      </div>
+
+      <div class="spTitle">よく使うスタンプ(クリックで即配置)</div>
+      <div id="stampTabBar"></div>
+      <div id="stampGrid"></div>
+      <div class="spBody" style="padding-top:0; display:flex; gap:6px;">
+        <button class="btn95sp" id="btnExportPresets" style="flex:1;">📤 書き出し</button>
+        <button class="btn95sp" id="btnImportPresets" style="flex:1;">📥 読み込み</button>
+        <input type="file" id="importPresetsInput" accept="application/json" hidden>
+      </div>
+
+      <div class="spTitle">自分の画像をはんこにする</div>
+      <div class="spBody" style="padding-top:0;">
+        <button class="btn95sp" id="spBtnAddStamp" style="width:100%;">📁 画像を追加</button>
+        <input type="file" id="stampFileInput" accept="image/*" multiple hidden>
       </div>
     </div>
   </div>
@@ -236,11 +459,12 @@
     <span class="cell" id="stKeys" title="現在のキー割り当て"></span>
     <span class="cell" id="stZoom">表示: -</span>
     <span class="cell" id="stOps">モザイク: 0</span>
+    <span class="cell" id="stStamps">スタンプ: 0</span>
   </div>
 </div>
 
 <input type="file" id="fileInput" accept="image/*" multiple hidden>
-<div id="dragOverlay" hidden>ドロップして追加</div>
+<div id="dragOverlay" hidden>ドロップして画像を追加（左のファイル一覧へ）</div>
 
 <dialog id="dlgHelp" class="dlg" aria-label="ヘルプ">
   <div class="titlebar"><span>ヘルプ - 使い方とショートカット</span><button type="button" class="xbtn" aria-label="閉じる" title="閉じる">×</button></div>
@@ -284,14 +508,32 @@
       <li>拡大時はステージ内をスクロールできます。画像を切り替えると自動で「適合」に戻ります。</li>
     </ul>
 
+    <h4>擬音スタンプ（右パネル）</h4>
+    <ul>
+      <li><b>作る</b>：書体・文字（改行OK）・縦書き・ボールド・文字色・縁取り色/太さ・不透明度を設定し、プレビューで確認できます。</li>
+      <li><b>配置</b>：「➕ 中央に配置」ボタン、または割り当てキーでカーソル位置に配置。「よく使うスタンプ」のマスをクリックすると、その内容ですぐ配置されます。</li>
+      <li><b>自分の画像をはんこに</b>：「📁 画像を追加」ボタン、またはキャンバスへ直接画像ファイルをドラッグ&amp;ドロップすると、その場にはんことして配置されます（複数可）。</li>
+      <li><b>選択・編集</b>：キャンバス上のスタンプをクリックすると選択され、右パネルの内容がそのスタンプの編集フォームになります。文字や色を変えるとリアルタイムに反映されます。</li>
+      <li><b>移動</b>：スタンプ本体をドラッグ。<kbd>Shift</kbd>+クリックで複数選択でき、まとめて移動・削除できます。</li>
+      <li><b>変形</b>：四隅の黄色いハンドルをドラッグすると自由変形（台形にも可）。<kbd>Shift</kbd>を押しながらドラッグすると、対角を固定したまま形状を保った拡大・縮小になります。</li>
+      <li><b>回転</b>：緑色のハンドルをドラッグ。</li>
+      <li><b>複製 / 最前面へ / 変形リセット / 選択削除</b>：右パネルのボタンから操作できます。</li>
+      <li><b>よく使うスタンプに保存</b>：⭐ボタンで現在の設定（選択中なら変形も含む）を登録。テキストの擬音だけでなく、自分で追加した画像のはんこも選択して保存できます。次回からワンクリックで同じ内容・同じ変形を配置できます。登録した項目はマス上で✕ボタンから削除できます。</li>
+      <li><b>タブ分け</b>：「よく使うスタンプ」の上にある番号タブで登録先を切り替えられます。「+」で新しいタブを追加できます。</li>
+      <li><b>書き出し / 読み込み</b>：登録した「よく使うスタンプ」をJSONファイルとして書き出し・読み込みできます。読み込み時は既存の登録を消さず、末尾に追加されます。</li>
+      <li>PNG保存時は、モザイク編集済みの画像にスタンプも合成されて1枚のPNGになります（見た目そのままの位置・変形で書き出されます）。</li>
+    </ul>
+
     <h4>ショートカット（固定）</h4>
     <dl>
       <dt>Ctrl / ⌘ + Z</dt><dd>元に戻す</dd>
       <dt>Ctrl / ⌘ + S</dt><dd>保存</dd>
-      <dt>Delete / Backspace</dt><dd>選択中の画像をリストから削除（確認なし）</dd>
+      <dt>Delete / Backspace</dt><dd>スタンプ選択中はそのスタンプを削除／未選択時は選択中の画像をリストから削除（確認なし）</dd>
       <dt>Esc</dt><dd>ドラッグ中の範囲選択・ペン操作をキャンセル</dd>
-      <dt>Shift + ドラッグ</dt><dd>画像をスクロール（移動）。拡大表示時に使用</dd>
-      <dt>Shift</dt><dd>四角／円ツールでのドラッグ中：正方形・正円に固定</dd>
+      <dt>Shift + ドラッグ（キャンバス空白部）</dt><dd>画像をスクロール（移動）。拡大表示時に使用</dd>
+      <dt>Shift（四角／円ツール）</dt><dd>ドラッグ中：正方形・正円に固定</dd>
+      <dt>Shift（スタンプの角ハンドル）</dt><dd>ドラッグ中：対角を固定して形状を保った拡大・縮小</dd>
+      <dt>Shift + クリック（スタンプ）</dt><dd>複数選択に追加／解除</dd>
     </dl>
 
     <h4>ショートカット（設定可能）</h4>
@@ -303,6 +545,8 @@
       <li>複数ファイルをまとめて開けば、キーで送り／戻ししながら次々作業できます。</li>
       <li>「保存して次へ」を割り当てキー未対応の作業でも、<b>PNG保存</b>＋<b>次へ送り</b>のキーを続けて押せば同じ動きにできます。</li>
       <li>粒度を粗くする→広範囲を大胆に、細かくする→ピンポイントに、という使い分けができます。</li>
+      <li>モザイクを描いたあとに続けてスタンプを置きたいときは、割り当てキー（デフォルト<code>6</code>）でカーソル位置にサッと配置し、あとから角のハンドルで調整するとスムーズです。</li>
+      <li>画像を切り替えるとスタンプもリセットされます。よく使う擬音やはんこ画像は事前に「よく使うスタンプに保存」しておくと、別画像でもすぐ呼び出せます。</li>
     </ul>
   </div>
 </dialog>
@@ -316,6 +560,7 @@
     <div class="krow"><span>縮小</span><button type="button" class="kbtn" data-act="zoomOut"></button></div>
     <div class="krow"><span>拡大</span><button type="button" class="kbtn" data-act="zoomIn"></button></div>
     <div class="krow"><span>保存</span><button type="button" class="kbtn" data-act="save"></button></div>
+    <div class="krow"><span>カーソル位置にスタンプ配置</span><button type="button" class="kbtn" data-act="placeStamp"></button></div>
     <div class="warn" id="keyWarn"></div>
     <div class="dlgfoot">
       <button type="button" id="btnKeyReset">初期値に戻す</button>
@@ -367,6 +612,7 @@ function applyLayout(){
   $('valZoom').textContent = Math.round(s * 100) + '%';
   updateStatus();
   scheduleOverlay();
+  if (window.StampLayer) window.StampLayer.setScale(s);
 }
 function zoomIn(){
   const cur0 = currentZoom();
@@ -568,11 +814,13 @@ view.addEventListener('pointerdown', e => {
   const pat = isEraser ? 'erase' : isLine ? tool : pattern;
   if (tool === 'pen' || isEraser)
     drag = { t: isEraser ? 'eraser' : 'pen', pat, bs:blockSize, size:penSize, pts:[p] };
-  else if (tool === 'rect')
+  else if (tool === 'rect'){
     drag = { t:'rect', pat, bs:blockSize, x0:p.x, y0:p.y, x:p.x, y:p.y, w:0, h:0 };
-  else if (tool === 'ell')
+    showToolHint();
+  } else if (tool === 'ell'){
     drag = { t:'ell',  pat, bs:blockSize, x0:p.x, y0:p.y, cx:p.x, cy:p.y, rx:0, ry:0 };
-  else
+    showToolHint();
+  } else
     drag = { t:'line', pat, bs:blockSize, x0:p.x, y0:p.y, x1:p.x, y1:p.y };
   scheduleOverlay();
 });
@@ -605,6 +853,7 @@ view.addEventListener('pointerup', () => {
   }
   if (!drag) return;
   const d = drag; drag = null;
+  hideToolHint();
   if (d.t === 'pen' || d.t === 'eraser') commit(d);
   else if (d.t === 'line') commit(d);
   else if ((d.t === 'rect' && d.w > 1 && d.h > 1) ||
@@ -695,6 +944,7 @@ function deleteCurrent(){
     cur = -1;
     ops = []; hist = []; dirty = false; drag = null; hover = null;
     mosCache.clear();
+    if (window.StampLayer) window.StampLayer.reset(0, 0);
     $('stage').hidden = true;
     $('dropZone').hidden = false;
     updateAll();
@@ -718,6 +968,7 @@ function loadCurrent(){
     vctx.drawImage(base, 0, 0);
     $('stage').hidden = false;
     $('dropZone').hidden = true;
+    if (window.StampLayer) window.StampLayer.reset(W, H);
     applyLayout();
     updateAll();
   };
@@ -754,17 +1005,24 @@ function outName(){
 }
 function save(cb){
   if (cur < 0) return;
-  view.toBlob(b => {
-    const u = URL.createObjectURL(b);
-    const a = document.createElement('a');
-    a.href = u; a.download = outName();
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(u), 5000);
-    files[cur].saved = true;
-    dirty = false;
-    renderList();
-    if (cb) cb();
-  }, 'image/png');
+  const finishSave = (srcCanvas) => {
+    srcCanvas.toBlob(b => {
+      const u = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = u; a.download = outName();
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 5000);
+      files[cur].saved = true;
+      dirty = false;
+      renderList();
+      if (cb) cb();
+    }, 'image/png');
+  };
+  if (window.StampLayer && window.StampLayer.hasStamps()){
+    window.StampLayer.renderOnto(view, W, H).then(finishSave);
+  } else {
+    finishSave(view);
+  }
 }
 
 /* --- ステータス／UI --- */
@@ -784,7 +1042,6 @@ function updateAll(){
   const has = cur >= 0;
   $('tbFile').textContent = has ? '- ' + files[cur].name : '';
   $('pos').textContent = has ? (cur + 1) + '/' + files.length : '-/-';
-  $('savePreview').textContent = has ? files[cur].name + ' → ' + outName() : '';
   for (const id of ['btnUndo','btnClear','btnSave','btnSaveNext','btnPrev','btnNext','btnZoomIn','btnZoomOut','btnZoomFit'])
     $(id).disabled = !has;
   if (has){
@@ -798,8 +1055,8 @@ function updateAll(){
 }
 
 /* --- キーボードショートカット --- */
-const DEFAULT_KEYS = { prev:'1', next:'2', zoomOut:'3', zoomIn:'4', save:'5' };
-const ACT_LABEL   = { prev:'前', next:'次', zoomOut:'縮小', zoomIn:'拡大', save:'保存' };
+const DEFAULT_KEYS = { prev:'1', next:'2', zoomOut:'3', zoomIn:'4', save:'5', placeStamp:'6' };
+const ACT_LABEL   = { prev:'前', next:'次', zoomOut:'縮小', zoomIn:'拡大', save:'保存', placeStamp:'スタンプ配置' };
 let keys = { ...DEFAULT_KEYS };
 try {
   const s = JSON.parse(localStorage.getItem('mzKeys') || 'null');
@@ -821,7 +1078,8 @@ function renderKeyStatus(){
     '  ' + ACT_LABEL.next + ':' + keyLabel(keys.next) +
     '  ' + ACT_LABEL.zoomOut + ':' + keyLabel(keys.zoomOut) +
     '  ' + ACT_LABEL.zoomIn + ':' + keyLabel(keys.zoomIn) +
-    '  ' + ACT_LABEL.save + ':' + keyLabel(keys.save);
+    '  ' + ACT_LABEL.save + ':' + keyLabel(keys.save) +
+    '  ' + ACT_LABEL.placeStamp + ':' + keyLabel(keys.placeStamp);
 }
 
 /* キー設定ダイアログ */
@@ -873,7 +1131,8 @@ function openHelp(){
   el.textContent = '';
   const list = [
     ['prev','前のファイルへ'], ['next','次のファイルへ'],
-    ['zoomOut','縮小'], ['zoomIn','拡大'], ['save','保存']
+    ['zoomOut','縮小'], ['zoomIn','拡大'], ['save','保存'],
+    ['placeStamp','カーソル位置にスタンプ配置']
   ];
   for (const [act, label] of list){
     const dt = document.createElement('dt'); dt.textContent = keyLabel(keys[act]);
@@ -909,13 +1168,24 @@ $('dropZone').onclick = () => $('fileInput').click();
 $('dropZone').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') $('fileInput').click(); };
 $('fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
 
-for (const b of document.querySelectorAll('.tool')){
+for (const b of document.querySelectorAll('.tool[data-tool]')){
   b.onclick = () => {
     tool = b.dataset.tool;
-    document.querySelectorAll('.tool').forEach(x => x.classList.toggle('active', x === b));
+    document.querySelectorAll('.tool[data-tool]').forEach(x => x.classList.toggle('active', x === b));
     view.style.cursor = (tool === 'pen' || tool === 'eraser') ? 'none' : 'crosshair';
+    hideToolHint();
     scheduleOverlay();
   };
+}
+function showToolHint(){
+  const el = $('toolHint');
+  if (!el) return;
+  el.textContent = (tool === 'rect' || tool === 'ell') ? 'Shiftで縦横比を固定' : '';
+}
+function hideToolHint(){
+  const el = $('toolHint');
+  if (!el) return;
+  el.textContent = '';
 }
 $('selPattern').onchange = e => { pattern = e.target.value; };
 $('rngBlock').oninput = e => { blockSize = +e.target.value; $('valBlock').textContent = blockSize; };
@@ -941,41 +1211,1168 @@ window.addEventListener('keydown', e => {
   const k = normKey(e);
   if ((e.ctrlKey || e.metaKey) && k === 'z'){ e.preventDefault(); undo(); return; }
   if ((e.ctrlKey || e.metaKey) && k === 's'){ e.preventDefault(); save(); return; }
-  if (e.key === 'Escape' && drag){ drag = null; scheduleOverlay(); return; }
+  if (e.key === 'Escape' && drag){ drag = null; hideToolHint(); scheduleOverlay(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (!k) return;
-  if (k === 'Delete' || k === 'Backspace'){ e.preventDefault(); deleteCurrent(); return; }
+  if (k === 'Delete' || k === 'Backspace'){
+    e.preventDefault();
+    if (window.StampLayer && window.StampLayer.hasSelection()){ window.StampLayer.deleteSelected(); return; }
+    deleteCurrent();
+    return;
+  }
   if (cur < 0 && k !== keys.prev && k !== keys.next) return;
   if      (k === keys.prev)   { e.preventDefault(); if (cur > 0) switchTo(cur - 1); }
   else if (k === keys.next)   { e.preventDefault(); if (cur < files.length - 1) switchTo(cur + 1); }
   else if (k === keys.zoomOut){ e.preventDefault(); zoomOut(); }
   else if (k === keys.zoomIn) { e.preventDefault(); zoomIn(); }
   else if (k === keys.save)   { e.preventDefault(); save(); }
+  else if (k === keys.placeStamp){ e.preventDefault(); if (window.StampLayer) window.StampLayer.placeStampAtCursor(); }
 });
 window.addEventListener('resize', () => {
   if (cur >= 0 && zoomMode === 'fit') applyLayout();
   updateStatus();
 });
 
-/* ドラッグ&ドロップ（ウィンドウ全体） */
+/* ドラッグ&ドロップ（ウィンドウ全体：ファイル追加 / ステージ内：はんこ追加） */
 let dragDepth = 0;
+function isOverStage(e){
+  const st = $('stage');
+  if (st.hidden) return false;
+  const r = st.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
 window.addEventListener('dragenter', e => {
   if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')){
-    dragDepth++; $('dragOverlay').hidden = false;
+    dragDepth++;
+    if (isOverStage(e)) { $('dragOverlay').hidden = true; }
+    else { $('dragOverlay').hidden = false; }
   }
 });
-window.addEventListener('dragleave', () => {
+window.addEventListener('dragover', e => {
+  e.preventDefault();
+  if (!(e.dataTransfer && [...e.dataTransfer.types].includes('Files'))) return;
+  if (isOverStage(e)) $('dragOverlay').hidden = true;
+  else $('dragOverlay').hidden = false;
+});
+window.addEventListener('dragleave', e => {
+  if (!(e.dataTransfer && [...e.dataTransfer.types].includes('Files'))) return;
   if (--dragDepth <= 0){ dragDepth = 0; $('dragOverlay').hidden = true; }
 });
-window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => {
-  e.preventDefault(); dragDepth = 0; $('dragOverlay').hidden = true;
+  e.preventDefault();
+  dragDepth = 0;
+  $('dragOverlay').hidden = true;
+  $('fileListWrap').classList.remove('dragover');
+  if (!e.dataTransfer) return;
+  if (isOverStage(e)){
+    // ステージ内へのドロップは「はんこ追加」として扱う（StampLayer側で処理する）
+    return;
+  }
+  addFiles(e.dataTransfer.files);
+});
+$('fileListWrap').addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); $('fileListWrap').classList.add('dragover'); });
+$('fileListWrap').addEventListener('dragleave', e => { $('fileListWrap').classList.remove('dragover'); });
+$('fileListWrap').addEventListener('drop', e => {
+  e.preventDefault(); e.stopPropagation();
+  $('fileListWrap').classList.remove('dragover');
+  $('dragOverlay').hidden = true;
   if (e.dataTransfer) addFiles(e.dataTransfer.files);
 });
 
 window.addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
 
+window.updateStatus = updateStatus;
 updateAll();
+})();
+</script>
+
+<script>
+/* =======================================================================
+   StampLayer: 擬音語スタンプ機能
+   座標系は画像本来のピクセル座標(W×H)。表示は#stageの実際のCSSサイズに
+   scale()で追従させることで、モザイクツールのズームと自動連動する。
+======================================================================= */
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const stickerLayer = $('stickerLayer');
+const stage = $('stage');
+const view = $('view');
+const dropHintStamp = $('dropHintStamp');
+
+let baseW = 0, baseH = 0;   // 画像本来のピクセルサイズ
+let curScale = 1;           // 表示スケール(ズーム%)
+let stickers = [];
+let zCounter = 1;
+let selected = null;
+let selectedGroup = [];
+
+/* ---------- ホモグラフィ(台形変形) ---------- */
+function solveHomography(srcPts, dstPts){
+  const A = [], B = [];
+  for (let i = 0; i < 4; i++){
+    const { x: sx, y: sy } = srcPts[i];
+    const { x: dx, y: dy } = dstPts[i];
+    A.push([sx, sy, 1, 0, 0, 0, -sx*dx, -sy*dx]); B.push(dx);
+    A.push([0, 0, 0, sx, sy, 1, -sx*dy, -sy*dy]); B.push(dy);
+  }
+  const n = 8;
+  for (let i = 0; i < n; i++){
+    let maxRow = i;
+    for (let k = i+1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+    [A[i], A[maxRow]] = [A[maxRow], A[i]];
+    [B[i], B[maxRow]] = [B[maxRow], B[i]];
+    for (let k = i+1; k < n; k++){
+      const factor = A[k][i] / A[i][i];
+      for (let j = i; j < n; j++) A[k][j] -= factor * A[i][j];
+      B[k] -= factor * B[i];
+    }
+  }
+  const h = new Array(n).fill(0);
+  for (let i = n-1; i >= 0; i--){
+    let sum = B[i];
+    for (let j = i+1; j < n; j++) sum -= A[i][j] * h[j];
+    h[i] = sum / A[i][i];
+  }
+  return [h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],1];
+}
+function homographyToMatrix3d(H){
+  const h0=H[0],h1=H[1],h2=H[2],h3=H[3],h4=H[4],h5=H[5],h6=H[6],h7=H[7],h8=H[8];
+  return [h0,h3,0,h6, h1,h4,0,h7, 0,0,1,0, h2,h5,0,h8];
+}
+function computeStickerCSS(st){
+  const xs = st.corners.map(p => p.x), ys = st.corners.map(p => p.y);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const maxX = Math.max(...xs), maxY = Math.max(...ys);
+  const localDst = st.corners.map(p => ({ x: p.x - minX, y: p.y - minY }));
+  const src = [{x:0,y:0},{x:st.baseW,y:0},{x:st.baseW,y:st.baseH},{x:0,y:st.baseH}];
+  const H = solveHomography(src, localDst);
+  const m3d = homographyToMatrix3d(H);
+  return { left:minX, top:minY, width:st.baseW, height:st.baseH, matrix3d:m3d };
+}
+function updateTransform(st){
+  const c = computeStickerCSS(st);
+  st.el.style.left = c.left + 'px';
+  st.el.style.top = c.top + 'px';
+  st.el.style.width = c.width + 'px';
+  st.el.style.height = c.height + 'px';
+  st.el.style.transform = `matrix3d(${c.matrix3d.map(v=>v.toFixed(6)).join(',')})`;
+  positionCornerHandles(st);
+}
+
+/* ---------- 表示スケール連動 ---------- */
+function setScale(s){
+  curScale = s || 1;
+  stickerLayer.style.transform = `scale(${curScale})`;
+  // ズーム変更時、既存スタンプのハンドル(非スケール要素)の位置を再計算する
+  stickers.forEach(st => positionCornerHandles(st));
+}
+function reset(w, h){
+  baseW = w; baseH = h;
+  stickers.forEach(st => removeStickerInternal(st));
+  stickers = []; selected = null; selectedGroup = [];
+  stickerLayer.innerHTML = '';
+  stickerLayer.style.width = w + 'px';
+  stickerLayer.style.height = h + 'px';
+  refreshSelectionUI();
+  updateStampStatus();
+}
+
+/* ---------- ポインタ座標→ステージ座標(W×H基準)変換 ---------- */
+function stagePt(e){
+  const r = stage.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * baseW / r.width,
+    y: (e.clientY - r.top)  * baseH / r.height,
+  };
+}
+
+/* ---------- 常時カーソル位置を追跡（キー操作でのスタンプ配置に使用） ---------- */
+let lastStagePt = null;
+stage.addEventListener('pointermove', e => { lastStagePt = stagePt(e); });
+stage.addEventListener('pointerleave', () => { lastStagePt = null; });
+function placeStampAtCursor(){
+  if (baseW === 0){ setStatus('先に画像を開いてください'); return; }
+  const text = spText.value.trim();
+  if (!text){ setStatus('文字を入力してください'); return; }
+  const p = lastStagePt || { x: baseW/2, y: baseH/2 };
+  addTextStickerAt(currentGenOpts(), p.x, p.y);
+}
+
+/* ---------- テキストスタンプ描画(canvas→dataURL) ---------- */
+const fontWeightMap = { 'M PLUS Rounded 1c': 900 };
+function waitFontsReady(font){
+  const weight = fontWeightMap[font] || 400;
+  return Promise.all([
+    document.fonts.load(`${weight} 48px '${font}'`),
+    document.fonts.load(`900 48px '${font}'`)
+  ]).catch(()=>{});
+}
+// 縁の太さが大きくなりすぎると、文字の細い部分でストローク同士が融合して
+// 塊のような不自然な見た目になるため、フォントサイズに対する上限を設けて緩やかに頭打ちにする
+function measureAndDraw(opts){
+  const { text, color, font, strokeColor, strokeWidthPct, bold, vertical } = opts;
+  const rawLines = (text || 'ドン').split('\n');
+  const swPct = strokeWidthPct != null ? strokeWidthPct : 11;
+  if (vertical) return measureAndDrawVertical(rawLines, color, font, strokeColor, swPct, bold);
+  return measureAndDrawHorizontal(rawLines, color, font, strokeColor, swPct, bold);
+}
+function measureAndDrawHorizontal(lines, color, font, strokeColor, swPct, bold){
+  const maxLen = Math.max(...lines.map(l => l.length), 1);
+  const fontSize = Math.max(36, Math.min(72, 260 / maxLen));
+  const lineHeight = fontSize * 1.15;
+  const fontWeightCss = bold ? 900 : (fontWeightMap[font] || 400);
+  const fontSpec = `${fontWeightCss} ${fontSize}px '${font}'`;
+  const sw = fontSize * (swPct / 100);
+
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+  mctx.font = fontSpec;
+  let maxWidth = 0;
+  lines.forEach(l => { maxWidth = Math.max(maxWidth, mctx.measureText(l).width); });
+
+  const margin = fontSize * 0.5 + sw;
+  const workW = maxWidth + margin * 2;
+  const workH = lines.length * lineHeight + margin * 2;
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const work = document.createElement('canvas');
+  work.width = Math.ceil(workW * dpr);
+  work.height = Math.ceil(workH * dpr);
+  const wctx = work.getContext('2d');
+  wctx.scale(dpr, dpr);
+  wctx.font = fontSpec;
+  wctx.textAlign = 'center';
+  wctx.textBaseline = 'alphabetic';
+
+  lines.forEach((l, i) => {
+    const cx = workW / 2;
+    const y = margin + fontSize * 0.85 + i * lineHeight;
+    wctx.save();
+    wctx.translate(cx, y);
+    wctx.rotate((i % 2 === 0 ? -3 : 3) * Math.PI / 180);
+    if (sw > 0){
+      wctx.lineJoin = 'round'; wctx.miterLimit = 2;
+      wctx.lineWidth = sw * 2;
+      wctx.strokeStyle = strokeColor;
+      wctx.strokeText(l, 0, 0);
+    }
+    wctx.fillStyle = color;
+    wctx.fillText(l, 0, 0);
+    wctx.restore();
+  });
+  return cropToOpaque(work, wctx, dpr);
+}
+function measureAndDrawVertical(lines, color, font, strokeColor, swPct, bold){
+  const maxCharsInColumn = Math.max(...lines.map(l => l.length), 1);
+  const fontSize = Math.max(36, Math.min(72, 260 / maxCharsInColumn));
+  const charHeight = fontSize * 1.05;
+  const colWidth = fontSize * 1.15;
+  const fontWeightCss = bold ? 900 : (fontWeightMap[font] || 400);
+  const fontSpec = `${fontWeightCss} ${fontSize}px '${font}'`;
+  const sw = fontSize * (swPct / 100);
+
+  const margin = fontSize * 0.5 + sw;
+  const numCols = lines.length;
+  const workW = numCols * colWidth + margin * 2;
+  const workH = maxCharsInColumn * charHeight + margin * 2;
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const work = document.createElement('canvas');
+  work.width = Math.ceil(workW * dpr);
+  work.height = Math.ceil(workH * dpr);
+  const wctx = work.getContext('2d');
+  wctx.scale(dpr, dpr);
+  wctx.font = fontSpec;
+  wctx.textAlign = 'center';
+  wctx.textBaseline = 'alphabetic';
+
+  lines.forEach((line, colIdx) => {
+    const colX = workW - margin - colWidth * colIdx - colWidth / 2;
+    [...line].forEach((ch, charIdx) => {
+      const y = margin + fontSize * 0.85 + charIdx * charHeight;
+      wctx.save();
+      wctx.translate(colX, y);
+      wctx.rotate((charIdx % 2 === 0 ? -2 : 2) * Math.PI / 180);
+      if (sw > 0){
+        wctx.lineJoin = 'round'; wctx.miterLimit = 2;
+        wctx.lineWidth = sw * 2;
+        wctx.strokeStyle = strokeColor;
+        wctx.strokeText(ch, 0, 0);
+      }
+      wctx.fillStyle = color;
+      wctx.fillText(ch, 0, 0);
+      wctx.restore();
+    });
+  });
+  return cropToOpaque(work, wctx, dpr);
+}
+function cropToOpaque(work, wctx, dpr){
+  const bbox = findOpaqueBBox(wctx, work.width, work.height);
+  const pad = Math.ceil(2 * dpr);
+  const cropX = Math.max(0, bbox.minX - pad);
+  const cropY = Math.max(0, bbox.minY - pad);
+  const cropW = Math.min(work.width, bbox.maxX + pad) - cropX;
+  const cropH = Math.min(work.height, bbox.maxY + pad) - cropY;
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = cropW; finalCanvas.height = cropH;
+  const fctx = finalCanvas.getContext('2d');
+  fctx.drawImage(work, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  return { dataUrl: finalCanvas.toDataURL('image/png'), w: cropW / dpr, h: cropH / dpr };
+}
+function findOpaqueBBox(ctx, w, h){
+  const data = ctx.getImageData(0, 0, w, h).data;
+  let minX = w, minY = h, maxX = 0, maxY = 0, found = false;
+  const step = Math.max(1, Math.floor(Math.min(w, h) / 400));
+  for (let y = 0; y < h; y += step){
+    for (let x = 0; x < w; x += step){
+      const alpha = data[(y * w + x) * 4 + 3];
+      if (alpha > 10){
+        found = true;
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!found) return { minX:0, minY:0, maxX:w, maxY:h };
+  return {
+    minX: Math.max(0, minX - step), minY: Math.max(0, minY - step),
+    maxX: Math.min(w, maxX + step + 1), maxY: Math.min(h, maxY + step + 1)
+  };
+}
+
+/* ---------- 生成パネル ---------- */
+const spText = $('spText'), spFont = $('spFont'), spColor = $('spColor'), spStroke = $('spStroke');
+const spStrokeWidthSlider = $('spStrokeWidthSlider'), spStrokeWidthVal = $('spStrokeWidthVal');
+const spBtnBold = $('spBtnBold'), spPreviewBox = $('spPreviewBox');
+const spOpSlider = $('spOpSlider'), spOpVal = $('spOpVal');
+const spBtnVertical = $('spBtnVertical');
+
+let genState = { bold:false, vertical:false };
+function currentGenOpts(){
+  return {
+    text: spText.value, font: spFont.value, color: spColor.value,
+    strokeColor: spStroke.value, strokeWidthPct: Number(spStrokeWidthSlider.value),
+    bold: genState.bold, vertical: genState.vertical,
+  };
+}
+let previewToken = 0;
+function refreshPreview(){
+  const token = ++previewToken;
+  const opts = currentGenOpts();
+  waitFontsReady(opts.font).then(() => {
+    if (token !== previewToken) return;
+    const { dataUrl } = measureAndDraw(opts);
+    spPreviewBox.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.opacity = spOpSlider.value / 100;
+    spPreviewBox.appendChild(img);
+  });
+}
+function syncControlsFromSticker(st){
+  spText.value = st.text;
+  spFont.value = st.font;
+  spColor.value = st.color;
+  spStroke.value = st.strokeColor;
+  spStrokeWidthSlider.value = st.strokeWidthPct;
+  spStrokeWidthVal.textContent = st.strokeWidthPct;
+  genState.bold = st.bold;
+  genState.vertical = !!st.vertical;
+  spBtnBold.classList.toggle('active', st.bold);
+  spBtnVertical.classList.toggle('active', genState.vertical);
+  spOpSlider.value = st.op;
+  spOpVal.textContent = st.op;
+}
+function onGenInputChanged(){
+  spStrokeWidthVal.textContent = spStrokeWidthSlider.value;
+  if (selected && selected.isText) applySelectedFromControls();
+  else refreshPreview();
+}
+[spText, spFont, spColor, spStroke, spStrokeWidthSlider].forEach(el => {
+  el.addEventListener('input', onGenInputChanged);
+  el.addEventListener('change', onGenInputChanged);
+});
+spBtnBold.addEventListener('click', () => {
+  genState.bold = !genState.bold;
+  spBtnBold.classList.toggle('active', genState.bold);
+  onGenInputChanged();
+});
+spBtnVertical.addEventListener('click', () => {
+  genState.vertical = !genState.vertical;
+  spBtnVertical.classList.toggle('active', genState.vertical);
+  onGenInputChanged();
+});
+spOpSlider.addEventListener('input', () => {
+  spOpVal.textContent = spOpSlider.value;
+  if (selected){
+    selected.op = Number(spOpSlider.value);
+    applyOpacity(selected);
+  } else {
+    const img = spPreviewBox.querySelector('img');
+    if (img) img.style.opacity = spOpSlider.value / 100;
+  }
+});
+$('spBtnResetShape').addEventListener('click', () => { if (selected) resetStickerShape(selected); });
+$('spBtnPlace').addEventListener('click', () => {
+  if (baseW === 0){ setStatus('先に画像を開いてください'); return; }
+  const text = spText.value.trim();
+  if (!text){ setStatus('文字を入力してください'); return; }
+  addTextStickerCentered(currentGenOpts());
+});
+refreshPreview();
+
+/* ---------- よく使うプリセット ---------- */
+const giongoPresets = [];
+const MY_PRESET_KEY = 'stamp95_my_presets_mz';
+function loadMyPresets(){
+  try { const raw = localStorage.getItem(MY_PRESET_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+function saveMyPresets(list){ try { localStorage.setItem(MY_PRESET_KEY, JSON.stringify(list)); } catch(e){} }
+let myPresets = loadMyPresets();
+const stampGrid = $('stampGrid');
+const stampTabBar = $('stampTabBar');
+let activeStampTab = 1;
+let pendingEmptyTabs = new Set(); // 「+」で作ったが、まだ何も保存されていない空タブ番号
+
+function getUsedTabNumbers(){
+  const nums = new Set([1]);
+  myPresets.forEach(p => nums.add(p.tab || 1));
+  pendingEmptyTabs.forEach(n => nums.add(n));
+  return [...nums].sort((a,b) => a - b);
+}
+
+function renderStampTabBar(){
+  if (!stampTabBar) return;
+  stampTabBar.innerHTML = '';
+  const tabs = getUsedTabNumbers();
+  if (!tabs.includes(activeStampTab)) activeStampTab = tabs[0];
+  tabs.forEach(n => {
+    const btn = document.createElement('div');
+    btn.className = 'stampTabBtn' + (n === activeStampTab ? ' active' : '');
+    btn.textContent = n;
+    btn.addEventListener('click', () => {
+      activeStampTab = n;
+      renderStampTabBar();
+      renderStampGrid();
+    });
+    stampTabBar.appendChild(btn);
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className = 'stampTabBtn addTab';
+  addBtn.textContent = '+';
+  addBtn.title = '新しいタブを追加';
+  addBtn.addEventListener('click', () => {
+    const nextNum = Math.max(...tabs) + 1;
+    pendingEmptyTabs.add(nextNum);
+    activeStampTab = nextNum;
+    renderStampTabBar();
+    renderStampGrid();
+  });
+  stampTabBar.appendChild(addBtn);
+}
+
+function renderStampGrid(){
+  stampGrid.innerHTML = '';
+  if (activeStampTab === 1){
+    giongoPresets.forEach(p => {
+      const opts = { kind:'text', text:p.text, color:p.color, font:p.font, strokeColor:p.strokeColor||'#ffffff', strokeWidthPct:p.strokeWidthPct!=null?p.strokeWidthPct:11, bold:!!p.bold };
+      addStampCell(opts, false);
+    });
+  }
+  const inThisTab = [];
+  myPresets.forEach((p, idx) => { if ((p.tab||1) === activeStampTab) inThisTab.push([p, idx]); });
+  inThisTab.forEach(([p, idx]) => addStampCell(p, true, idx));
+
+  if (giongoPresets.length === 0 && inThisTab.length === 0){
+    const emptyMsg = document.createElement('div');
+    emptyMsg.style.cssText = 'grid-column:1/-1; font-size:11px; color:#888; padding:10px 4px; text-align:center;';
+    emptyMsg.textContent = 'このタブにはまだ登録がありません。「⭐よく使うに保存」を押すとここに追加されます';
+    stampGrid.appendChild(emptyMsg);
+  }
+}
+function addStampCell(opts, isMine, myIndex){
+  const kind = opts.kind || 'text'; // 互換: kind未指定は従来のテキストプリセット
+  const cell = document.createElement('div');
+  cell.className = 'stampCell';
+  if (isMine) cell.style.borderColor = '#e6a817';
+  const tip = document.createElement('div'); tip.className = 'tip';
+  tip.textContent = kind === 'image' ? (opts.label || 'はんこ画像') : opts.text;
+  cell.appendChild(tip);
+
+  if (kind === 'image'){
+    const img = document.createElement('img'); img.src = opts.src;
+    cell.appendChild(img);
+  } else {
+    waitFontsReady(opts.font).then(() => {
+      const { dataUrl } = measureAndDraw(opts);
+      const img = document.createElement('img'); img.src = dataUrl;
+      cell.appendChild(img);
+    });
+  }
+
+  cell.addEventListener('click', () => {
+    if (baseW === 0){ setStatus('先に画像を開いてください'); return; }
+    if (kind === 'image'){
+      addImageStickerFromPreset(opts);
+    } else {
+      loadOptsIntoPanel(opts);
+      addTextStickerCentered(opts);
+    }
+  });
+  if (isMine){
+    const delBtn = document.createElement('div');
+    delBtn.className = 'stampCellDel'; delBtn.textContent = '✕'; delBtn.title = '削除';
+    delBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const label = kind === 'image' ? (opts.label || 'はんこ画像') : opts.text;
+      if (confirm(`「${label}」をよく使うスタンプから削除しますか？`)){
+        myPresets.splice(myIndex, 1);
+        saveMyPresets(myPresets);
+        renderStampTabBar();
+        renderStampGrid();
+      }
+    });
+    cell.appendChild(delBtn);
+  }
+  stampGrid.appendChild(cell);
+}
+renderStampTabBar();
+renderStampGrid();
+
+$('spBtnSaveToMyPreset').addEventListener('click', () => {
+  if (selected && selected.isText){
+    const opts = {
+      kind:'text',
+      text:selected.text, font:selected.font, color:selected.color,
+      strokeColor:selected.strokeColor, strokeWidthPct:selected.strokeWidthPct,
+      bold:selected.bold, vertical:selected.vertical,
+      shape: cornersToRelativeShape(selected),
+    };
+    pushMyPreset(opts, opts.text);
+    return;
+  }
+  if (selected && !selected.isText){
+    const opts = {
+      kind:'image',
+      src: selected.src,
+      baseW: selected.baseW, baseH: selected.baseH,
+      shape: cornersToRelativeShape(selected),
+      label: 'はんこ画像',
+    };
+    pushMyPreset(opts, opts.label);
+    return;
+  }
+  const text = spText.value.trim();
+  if (!text){ setStatus('文字を入力するか、スタンプを選択してから保存してください'); return; }
+  const opts = Object.assign({ kind:'text' }, currentGenOpts());
+  pushMyPreset(opts, text);
+});
+
+function pushMyPreset(opts, label){
+  opts.tab = activeStampTab;
+  myPresets.push(opts);
+  pendingEmptyTabs.delete(activeStampTab); // 実データが入ったので仮登録から昇格
+  saveMyPresets(myPresets);
+  renderStampTabBar();
+  renderStampGrid();
+  setStatus(`「${label}」をよく使うスタンプ(タブ${activeStampTab})に保存しました`);
+}
+
+/* ---------- よく使うスタンプのインポート/エクスポート ---------- */
+const btnExportPresets = $('btnExportPresets');
+const btnImportPresets = $('btnImportPresets');
+const importPresetsInput = $('importPresetsInput');
+if (btnExportPresets) btnExportPresets.addEventListener('click', () => {
+  if (myPresets.length === 0){ setStatus('書き出せるスタンプがありません'); return; }
+  const json = JSON.stringify({ type:'stamp95_presets', version:1, presets: myPresets }, null, 2);
+  const blob = new Blob([json], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = 'my_stamps_' + Date.now() + '.json';
+  a.href = url;
+  a.click();
+  URL.revokeObjectURL(url);
+  setStatus(`よく使うスタンプ ${myPresets.length}個を書き出しました`);
+});
+if (btnImportPresets) btnImportPresets.addEventListener('click', () => importPresetsInput.click());
+if (importPresetsInput) importPresetsInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const imported = Array.isArray(data) ? data : data.presets;
+      if (!Array.isArray(imported)) throw new Error('形式不正');
+      myPresets = myPresets.concat(imported);
+      saveMyPresets(myPresets);
+      renderStampTabBar();
+      renderStampGrid();
+      setStatus(`${imported.length}個のスタンプを読み込み、追加しました(既存データは保持されています)`);
+    } catch(err){
+      setStatus('読み込みに失敗しました: ファイル形式を確認してください');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+function cornersToRelativeShape(st){
+  const center = getStickerCenter(st);
+  return { relCorners: st.corners.map(p => ({ rx:(p.x-center.x)/st.baseW, ry:(p.y-center.y)/st.baseH })) };
+}
+function relativeShapeToCorners(shape, w, h, cx, cy, scale){
+  return shape.relCorners.map(p => ({ x: cx + p.rx * w * scale, y: cy + p.ry * h * scale }));
+}
+function loadOptsIntoPanel(opts){
+  spText.value = opts.text;
+  spFont.value = opts.font;
+  spColor.value = opts.color;
+  spStroke.value = opts.strokeColor || '#ffffff';
+  spStrokeWidthSlider.value = opts.strokeWidthPct != null ? opts.strokeWidthPct : 11;
+  spStrokeWidthVal.textContent = spStrokeWidthSlider.value;
+  genState.bold = !!opts.bold;
+  spBtnBold.classList.toggle('active', genState.bold);
+}
+
+/* ---------- 自分の画像をはんこ追加 ---------- */
+const stampFileInput = $('stampFileInput');
+$('spBtnAddStamp').addEventListener('click', () => stampFileInput.click());
+stampFileInput.addEventListener('change', e => {
+  if (baseW === 0){ setStatus('先に画像を開いてください'); stampFileInput.value=''; return; }
+  [...e.target.files].forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => addImageStickerCentered(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+  stampFileInput.value = '';
+  setStatus('自分のはんこを追加しました');
+});
+// ステージへのドラッグ&ドロップでもはんこ追加(画像ファイルドロップ時、モザイク側の複数画像追加と共存)
+// ※ dataTransfer.types に 'Files' が無い場合はOS外部からのファイルドラッグではない
+//   (スタンプ要素自体の誤ドラッグ等)ので無視する
+function isFileDrag(e){
+  return !!(e.dataTransfer && [...e.dataTransfer.types].includes('Files'));
+}
+let stageDragDepth = 0;
+stage.addEventListener('dragenter', e => {
+  if (baseW === 0 || !isFileDrag(e)) return;
+  e.preventDefault(); e.stopPropagation();
+  stageDragDepth++;
+  dropHintStamp.style.display = 'flex';
+});
+stage.addEventListener('dragover', e => {
+  if (baseW === 0 || !isFileDrag(e)) return;
+  e.preventDefault(); e.stopPropagation();
+});
+stage.addEventListener('dragleave', e => {
+  if (!isFileDrag(e)) return;
+  e.stopPropagation();
+  stageDragDepth = Math.max(0, stageDragDepth - 1);
+  if (stageDragDepth === 0) dropHintStamp.style.display = 'none';
+});
+stage.addEventListener('drop', e => {
+  if (baseW === 0 || !isFileDrag(e)) return;
+  const items = [...(e.dataTransfer.files||[])];
+  if (!items.length) return;
+  e.preventDefault(); e.stopPropagation();
+  stageDragDepth = 0;
+  dropHintStamp.style.display = 'none';
+  items.filter(f=>f.type.startsWith('image/')).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => addImageStickerCentered(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+}, true);
+
+/* ---------- スタンプ配置・操作 ---------- */
+function makeCorners(x,y,w,h){ return [{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h}]; }
+function createSticker(props){
+  const el = document.createElement('div');
+  el.className = 'sticker';
+  return Object.assign({ el, rot:0, op:100, z:zCounter++ }, props);
+}
+function addTextStickerAt(opts, cx, cy){
+  if (baseW === 0){ setStatus('先に画像を開いてください'); return; }
+  waitFontsReady(opts.font).then(() => {
+    const { dataUrl, w, h } = measureAndDraw(opts);
+    let corners;
+    if (opts.shape){
+      corners = relativeShapeToCorners(opts.shape, w, h, cx, cy, 1);
+    } else {
+      const scale = Math.min(1, (baseW*0.35) / Math.max(w, h));
+      const dw = w*scale, dh = h*scale;
+      corners = makeCorners(cx-dw/2, cy-dh/2, dw, dh);
+    }
+    const stOpts = Object.assign({}, opts);
+    delete stOpts.shape;
+    const st = createSticker({ isText:true, ...stOpts, src:dataUrl, baseW:w, baseH:h, corners });
+    placeSticker(st);
+    selectSticker(st);
+    setStatus('スタンプを配置しました');
+  });
+}
+function addTextStickerCentered(opts){ addTextStickerAt(opts, baseW/2, baseH/2); }
+function addImageStickerAt(src, cx, cy){
+  if (baseW === 0){ setStatus('先に画像を開いてください'); return; }
+  const img = new Image();
+  img.onload = () => {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const scale = Math.min(1, (baseW*0.3) / Math.max(w, h));
+    const dw = w*scale, dh = h*scale;
+    const st = createSticker({ isText:false, src, baseW:w, baseH:h, corners: makeCorners(cx-dw/2, cy-dh/2, dw, dh) });
+    placeSticker(st);
+    selectSticker(st);
+  };
+  img.src = src;
+}
+function addImageStickerCentered(src){ addImageStickerAt(src, baseW/2, baseH/2); }
+
+// 保存済みプリセット(変形情報つき)から画像スタンプを中央に配置
+function addImageStickerFromPreset(opts){
+  if (baseW === 0){ setStatus('先に画像を開いてください'); return; }
+  const cx = baseW / 2, cy = baseH / 2;
+  const corners = opts.shape
+    ? relativeShapeToCorners(opts.shape, opts.baseW, opts.baseH, cx, cy, 1)
+    : makeCorners(cx - opts.baseW/2, cy - opts.baseH/2, opts.baseW, opts.baseH);
+  const st = createSticker({ isText:false, src:opts.src, baseW:opts.baseW, baseH:opts.baseH, corners });
+  placeSticker(st);
+  selectSticker(st);
+  setStatus('スタンプを配置しました');
+}
+
+// キャンバス空白クリックは選択解除のみ（モザイク操作直後の誤クリックでスタンプが
+// 配置されてしまうのを防ぐため、配置は専用ボタンから行う）
+view.addEventListener('click', e => {
+  if (baseW === 0) return;
+  selectSticker(null);
+});
+
+let selectedUpdateToken = 0;
+function regenerateTextSticker(st){
+  return waitFontsReady(st.font).then(() => {
+    const { dataUrl, w, h } = measureAndDraw({
+      text:st.text, font:st.font, color:st.color, strokeColor:st.strokeColor,
+      strokeWidthPct:st.strokeWidthPct, bold:st.bold, vertical:st.vertical
+    });
+    // 変形(台形・回転)を保ったまま文字だけ差し替えるため、
+    // 現在のcornersを「中心からの相対位置(旧baseW/baseHで正規化)」として保存し、
+    // 新しいbaseW/baseHに対して同じ相対位置を再適用する
+    const center = getStickerCenter(st);
+    const shape = cornersToRelativeShape(st); // 旧baseW/baseH基準の相対形状
+    st.src = dataUrl; st.baseW = w; st.baseH = h;
+    st.corners = relativeShapeToCorners(shape, w, h, center.x, center.y, 1);
+    const img = st.el.querySelector('img');
+    if (img) img.src = st.src;
+    updateTransform(st);
+  });
+}
+function applySelectedFromControls(){
+  const o = currentGenOpts();
+  const target = selected;
+  if (!target) return;
+  Object.assign(target, o);
+  const token = ++selectedUpdateToken;
+  regenerateTextSticker(target).then(() => {
+    if (token !== selectedUpdateToken) return; // 途中でさらに変更されていたら古い結果は無視
+    if (selected === target) refreshPreviewFromSelected();
+  });
+}
+function refreshPreviewFromSelected(){
+  if (!selected) return;
+  spPreviewBox.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = selected.src;
+  img.style.opacity = selected.op / 100;
+  spPreviewBox.appendChild(img);
+}
+function applyOpacity(st){
+  st.el.style.opacity = st.op / 100;
+  if (selected === st){
+    const img = spPreviewBox.querySelector('img');
+    if (img) img.style.opacity = st.op / 100;
+  }
+}
+function positionCornerHandles(st){
+  if (!st.handleEls) return;
+  st.corners.forEach((p,i) => {
+    st.handleEls[i].style.left = (p.x*curScale) + 'px';
+    st.handleEls[i].style.top  = (p.y*curScale) + 'px';
+  });
+  if (st.delHandleEl){
+    const top = st.corners[0];
+    st.delHandleEl.style.left = (top.x*curScale - 8) + 'px';
+    st.delHandleEl.style.top  = (top.y*curScale - 20) + 'px';
+  }
+  if (st.rotHandleEl){
+    const tl = st.corners[0], tr = st.corners[1];
+    const midX = (tl.x+tr.x)/2, midY = (tl.y+tr.y)/2;
+    const dx = tr.x-tl.x, dy = tr.y-tl.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const nx = -dy/len, ny = dx/len;
+    const offset = 24 / curScale;
+    st.rotHandleEl.style.left = ((midX + nx*offset) * curScale) + 'px';
+    st.rotHandleEl.style.top  = ((midY + ny*offset) * curScale) + 'px';
+  }
+}
+function getStickerCenter(st){
+  const xs = st.corners.map(p=>p.x), ys = st.corners.map(p=>p.y);
+  return { x:(Math.min(...xs)+Math.max(...xs))/2, y:(Math.min(...ys)+Math.max(...ys))/2 };
+}
+function rotatePoint(p, center, angleRad){
+  const dx=p.x-center.x, dy=p.y-center.y;
+  const cos=Math.cos(angleRad), sin=Math.sin(angleRad);
+  return { x: center.x+dx*cos-dy*sin, y: center.y+dx*sin+dy*cos };
+}
+
+// ハンドルはピクセル座標系(curScale適用後)で扱うため、handleLayerは非スケール要素として
+// stickerLayerの親(#stage)直下に別途重ねる
+const handleLayer = document.createElement('div');
+handleLayer.style.cssText = 'position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none;';
+stage.appendChild(handleLayer);
+
+function placeSticker(st){
+  const el = st.el;
+  el.draggable = false;
+  el.style.zIndex = st.z;
+  el.style.opacity = st.op / 100;
+  const img = document.createElement('img');
+  img.src = st.src; img.draggable = false;
+  el.appendChild(img);
+  stickerLayer.appendChild(el);
+  stickers.push(st);
+  updateTransform(st);
+
+  el.addEventListener('pointerdown', e => {
+    if (e.target !== el && e.target.tagName !== 'IMG') return;
+    e.stopPropagation();
+    if (e.shiftKey){ toggleSelectSticker(st); return; }
+    if (!selectedGroup.includes(st)) selectSticker(st);
+    const startX = e.clientX, startY = e.clientY;
+    const targets = selectedGroup.length ? selectedGroup : [st];
+    const origCornersMap = targets.map(s => s.corners.map(p => ({x:p.x,y:p.y})));
+    el.setPointerCapture(e.pointerId);
+    function onMove(ev){
+      const dx = (ev.clientX-startX)/curScale, dy = (ev.clientY-startY)/curScale;
+      targets.forEach((s,idx) => {
+        s.corners = origCornersMap[idx].map(p => ({x:p.x+dx, y:p.y+dy}));
+        updateTransform(s);
+      });
+    }
+    function onUp(){ el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); }
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+  });
+
+  const delHandle = document.createElement('div');
+  delHandle.className = 'delHandle'; delHandle.textContent = '✕'; delHandle.style.display = 'none';
+  delHandle.addEventListener('pointerdown', e => e.stopPropagation());
+  delHandle.addEventListener('click', e => { e.stopPropagation(); removeSticker(st); });
+  handleLayer.appendChild(delHandle);
+  st.delHandleEl = delHandle;
+
+  const rotHandle = document.createElement('div');
+  rotHandle.className = 'cornerHandle rotHandle'; rotHandle.style.display = 'none';
+  handleLayer.appendChild(rotHandle);
+  st.rotHandleEl = rotHandle;
+  rotHandle.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    selectSticker(st);
+    const center = getStickerCenter(st);
+    const r = stage.getBoundingClientRect();
+    const startAngle = Math.atan2((e.clientY-r.top)/curScale - center.y, (e.clientX-r.left)/curScale - center.x);
+    const origCorners = st.corners.map(p => ({x:p.x,y:p.y}));
+    rotHandle.setPointerCapture(e.pointerId);
+    function onMove(ev){
+      const curAngle = Math.atan2((ev.clientY-r.top)/curScale - center.y, (ev.clientX-r.left)/curScale - center.x);
+      const delta = curAngle - startAngle;
+      st.corners = origCorners.map(p => rotatePoint(p, center, delta));
+      updateTransform(st);
+    }
+    function onUp(){ rotHandle.removeEventListener('pointermove', onMove); rotHandle.removeEventListener('pointerup', onUp); }
+    rotHandle.addEventListener('pointermove', onMove);
+    rotHandle.addEventListener('pointerup', onUp);
+  });
+
+  st.handleEls = [0,1,2,3].map(i => {
+    const h = document.createElement('div');
+    h.className = 'cornerHandle'; h.style.display = 'none';
+    handleLayer.appendChild(h);
+    h.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      selectSticker(st);
+      h.setPointerCapture(e.pointerId);
+      // Shift併用時：対角の頂点を固定点として、形状(縦横比・台形具合)を保ったまま
+      // 相似拡大縮小する。開始時点の各頂点の「固定点からの相対位置」を保持しておき、
+      // ドラッグ中の頂点の移動量を固定点からのベクトルに投影してスケール係数を求める。
+      const opposite = (i + 2) % 4;
+      const fixedPt = { x: st.corners[opposite].x, y: st.corners[opposite].y };
+      const origCorners = st.corners.map(p => ({ x:p.x, y:p.y }));
+      const origVec = { x: origCorners[i].x - fixedPt.x, y: origCorners[i].y - fixedPt.y };
+      const origLen = Math.hypot(origVec.x, origVec.y) || 1;
+      const origRel = origCorners.map(p => ({ x: p.x - fixedPt.x, y: p.y - fixedPt.y }));
+      function onMove(ev){
+        const r = stage.getBoundingClientRect();
+        const p = { x: (ev.clientX-r.left)/curScale, y: (ev.clientY-r.top)/curScale };
+        if (ev.shiftKey){
+          // 固定点→新しい頂点位置のベクトルを、固定点→元の頂点位置のベクトルに投影し、
+          // その投影長さの比をスケール係数として全頂点に一律適用する(形状を保った拡縮)
+          const newVec = { x: p.x - fixedPt.x, y: p.y - fixedPt.y };
+          const proj = (newVec.x * origVec.x + newVec.y * origVec.y) / origLen; // origVec方向への投影距離
+          const scale = Math.max(0.02, proj / origLen);
+          st.corners = origRel.map(rel => ({
+            x: fixedPt.x + rel.x * scale,
+            y: fixedPt.y + rel.y * scale,
+          }));
+        } else {
+          st.corners[i] = { x: p.x, y: p.y };
+        }
+        updateTransform(st);
+      }
+      function onUp(){ h.removeEventListener('pointermove', onMove); h.removeEventListener('pointerup', onUp); }
+      h.addEventListener('pointermove', onMove);
+      h.addEventListener('pointerup', onUp);
+    });
+    return h;
+  });
+  positionCornerHandles(st);
+  updateStampStatus();
+}
+function resetStickerShape(st){
+  const xs = st.corners.map(p=>p.x), ys = st.corners.map(p=>p.y);
+  const cx = (Math.min(...xs)+Math.max(...xs))/2;
+  const cy = (Math.min(...ys)+Math.max(...ys))/2;
+  const scale = Math.min(1, (baseW*0.35) / Math.max(st.baseW, st.baseH));
+  const dw = st.baseW*scale, dh = st.baseH*scale;
+  st.corners = makeCorners(cx-dw/2, cy-dh/2, dw, dh);
+  updateTransform(st);
+}
+function setHandlesVisible(st, showDel, showTransform){
+  if (st.handleEls) st.handleEls.forEach(h => h.style.display = showTransform ? 'block' : 'none');
+  if (st.rotHandleEl) st.rotHandleEl.style.display = showTransform ? 'block' : 'none';
+  if (st.delHandleEl) st.delHandleEl.style.display = showDel ? 'block' : 'none';
+}
+function removeStickerInternal(st){
+  st.el.remove();
+  if (st.handleEls) st.handleEls.forEach(h => h.remove());
+  if (st.delHandleEl) st.delHandleEl.remove();
+  if (st.rotHandleEl) st.rotHandleEl.remove();
+}
+function removeSticker(st){
+  removeStickerInternal(st);
+  stickers = stickers.filter(s => s !== st);
+  selectedGroup = selectedGroup.filter(s => s !== st);
+  if (selected === st) selected = selectedGroup[selectedGroup.length-1] || null;
+  refreshSelectionUI();
+  updateStampStatus();
+  setStatus('スタンプを削除しました');
+}
+function selectSticker(st){
+  selectedGroup = st ? [st] : [];
+  selected = st;
+  refreshSelectionUI();
+}
+function toggleSelectSticker(st){
+  if (selectedGroup.includes(st)){
+    selectedGroup = selectedGroup.filter(s => s !== st);
+    if (selected === st) selected = selectedGroup[selectedGroup.length-1] || null;
+  } else {
+    selectedGroup.push(st); selected = st;
+  }
+  refreshSelectionUI();
+}
+function refreshSelectionUI(){
+  stickers.forEach(s => {
+    const inGroup = selectedGroup.includes(s);
+    s.el.classList.toggle('selected', inGroup);
+    const isSingle = inGroup && selectedGroup.length === 1;
+    setHandlesVisible(s, inGroup, isSingle);
+  });
+  const anySelected = selectedGroup.length > 0;
+  const singleSelected = selectedGroup.length === 1;
+  ['spBtnDup','spBtnFront','spBtnDelSel'].forEach(id => $(id).disabled = !anySelected);
+  $('spBtnResetShape').disabled = !singleSelected;
+
+  if (singleSelected && selected){
+    if (selected.isText) syncControlsFromSticker(selected);
+    refreshPreviewFromSelected();
+  } else if (anySelected){
+    // 複数選択中：パネルは直前の単一選択内容のまま(まとめて移動・削除は右パネルのボタンで操作可能)
+  } else {
+    refreshPreview();
+  }
+}
+$('spBtnDup').addEventListener('click', () => {
+  if (!selectedGroup.length) return;
+  const clones = selectedGroup.map(s => {
+    const props = Object.assign({}, s);
+    delete props.el; delete props.handleEls; delete props.delHandleEl; delete props.rotHandleEl;
+    props.corners = s.corners.map(p => ({ x:p.x+20, y:p.y+20 }));
+    const clone = createSticker(props);
+    placeSticker(clone);
+    return clone;
+  });
+  selectedGroup = clones; selected = clones[clones.length-1];
+  refreshSelectionUI();
+});
+$('spBtnFront').addEventListener('click', () => {
+  if (!selectedGroup.length) return;
+  selectedGroup.forEach(s => { s.z = zCounter++; s.el.style.zIndex = s.z; });
+});
+$('spBtnDelSel').addEventListener('click', () => { [...selectedGroup].forEach(s => removeSticker(s)); });
+
+/* ---------- ステータス表示 ---------- */
+let statusMsgTimer = null;
+function setStatus(msg){
+  updateStampStatus();
+  const el = $('stInfo');
+  if (el && msg){
+    const prev = el.textContent;
+    el.textContent = msg;
+    clearTimeout(statusMsgTimer);
+    statusMsgTimer = setTimeout(() => { if (window.updateStatus) window.updateStatus(); }, 2000);
+  }
+}
+function updateStampStatus(){
+  const el = $('stStamps');
+  if (el) el.textContent = 'スタンプ: ' + stickers.length;
+}
+
+/* ---------- 保存時の合成 ---------- */
+function hasStamps(){ return stickers.length > 0; }
+function hasSelection(){ return selectedGroup.length > 0; }
+function deleteSelected(){ [...selectedGroup].forEach(s => removeSticker(s)); }
+
+/* ---------- ホモグラフィの逆行列(3x3) ---------- */
+// solveHomographyが返す [h0..h8] を3x3行列とみなし、その逆行列を返す。
+// dst = H * src の関係なので、src = H^-1 * dst でソース座標を逆算できる。
+function invertHomography(H){
+  const [a,b,c, d,e,f, g,h,i] = H;
+  const A =  (e*i - f*h);
+  const B = -(d*i - f*g);
+  const C =  (d*h - e*g);
+  const D = -(b*i - c*h);
+  const E =  (a*i - c*g);
+  const F = -(a*h - b*g);
+  const G =  (b*f - c*e);
+  const Hh = -(a*f - c*d);
+  const I =  (a*e - b*d);
+  const det = a*A + b*B + c*C;
+  if (Math.abs(det) < 1e-12) return null;
+  const invDet = 1/det;
+  // 転置に注意(余因子行列の転置=随伴行列)
+  return [
+    A*invDet, D*invDet, G*invDet,
+    B*invDet, E*invDet, Hh*invDet,
+    C*invDet, F*invDet, I*invDet,
+  ];
+}
+// 逆ホモグラフィで dst座標(x,y) → src座標(sx,sy) を求める
+function applyHomography(H, x, y){
+  const w = H[6]*x + H[7]*y + H[8];
+  const sx = (H[0]*x + H[1]*y + H[2]) / w;
+  const sy = (H[3]*x + H[4]*y + H[5]) / w;
+  return [sx, sy];
+}
+
+/* ---------- スタンプ1個をピクセル単位の射影ワープで描画 ----------
+   CSS側のmatrix3d表示と同じホモグラフィ(solveHomography)を使い、
+   出力側の各ピクセルについて逆写像でソース座標を求めてサンプリングする。
+   三角形分割のアフィン近似とは異なり、CSS表示と完全に一致する形状になる。 */
+function drawWarpedImage(octx, img, st){
+  const srcW = st.baseW, srcH = st.baseH;
+  const c = st.corners;
+
+  // ソース画像を一旦オフスクリーンcanvasに論理サイズ(srcW×srcH)で描画しておく
+  // (img.naturalWidth/HeightがdevicePixelRatio倍の場合があるため正規化)
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = Math.max(1, Math.round(srcW));
+  srcCanvas.height = Math.max(1, Math.round(srcH));
+  const sctx = srcCanvas.getContext('2d');
+  sctx.drawImage(img, 0, 0, img.naturalWidth || img.width, img.naturalHeight || img.height, 0, 0, srcCanvas.width, srcCanvas.height);
+  const srcData = sctx.getImageData(0, 0, srcCanvas.width, srcCanvas.height).data;
+  const sW = srcCanvas.width, sH = srcCanvas.height;
+
+  // 出力先のバウンディングボックスを求める
+  const xs = c.map(p=>p.x), ys = c.map(p=>p.y);
+  const minX = Math.max(0, Math.floor(Math.min(...xs)));
+  const minY = Math.max(0, Math.floor(Math.min(...ys)));
+  const maxX = Math.min(octx.canvas.width,  Math.ceil(Math.max(...xs)));
+  const maxY = Math.min(octx.canvas.height, Math.ceil(Math.max(...ys)));
+  const outW = maxX - minX, outH = maxY - minY;
+  if (outW <= 0 || outH <= 0) return;
+
+  // dst(0,0)-(srcW,0)-(srcW,srcH)-(0,srcH) → st.corners(絶対座標) のホモグラフィを、
+  // このバウンディングボックス内のローカル座標系で解き直す(数値精度のため)
+  const localCorners = c.map(p => ({ x: p.x - minX, y: p.y - minY }));
+  const srcPts = [{x:0,y:0},{x:srcW,y:0},{x:srcW,y:srcH},{x:0,y:srcH}];
+  const H = solveHomography(srcPts, localCorners); // src→dst
+  const Hinv = invertHomography(H);                 // dst→src
+  if (!Hinv) return;
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = outW; outCanvas.height = outH;
+  const outCtx = outCanvas.getContext('2d');
+  const outImgData = outCtx.createImageData(outW, outH);
+  const outData = outImgData.data;
+  const alpha = st.op / 100;
+
+  for (let oy = 0; oy < outH; oy++){
+    for (let ox = 0; ox < outW; ox++){
+      const [sx, sy] = applyHomography(Hinv, ox + 0.5, oy + 0.5);
+      const oi = (oy * outW + ox) * 4;
+      if (sx < 0 || sy < 0 || sx >= sW || sy >= sH) continue; // 範囲外は透明のまま
+      // バイリニア補間でサンプリング
+      const x0 = Math.floor(sx), y0 = Math.floor(sy);
+      const x1 = Math.min(sW-1, x0+1), y1 = Math.min(sH-1, y0+1);
+      const fx = sx - x0, fy = sy - y0;
+      const i00 = (y0*sW+x0)*4, i10 = (y0*sW+x1)*4, i01 = (y1*sW+x0)*4, i11 = (y1*sW+x1)*4;
+      for (let ch = 0; ch < 4; ch++){
+        const v00 = srcData[i00+ch], v10 = srcData[i10+ch];
+        const v01 = srcData[i01+ch], v11 = srcData[i11+ch];
+        const top = v00 + (v10-v00)*fx;
+        const bot = v01 + (v11-v01)*fx;
+        outData[oi+ch] = top + (bot-top)*fy;
+      }
+      outData[oi+3] = outData[oi+3] * alpha;
+    }
+  }
+  outCtx.putImageData(outImgData, 0, 0);
+  octx.drawImage(outCanvas, minX, minY);
+}
+function renderOnto(srcCanvasEl, w, h){
+  return new Promise(resolve => {
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const octx = out.getContext('2d');
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = 'high';
+    octx.drawImage(srcCanvasEl, 0, 0);
+    const sorted = [...stickers].sort((a,b) => a.z - b.z);
+    let pending = sorted.length;
+    if (pending === 0){ resolve(out); return; }
+    sorted.forEach(st => {
+      const im = new Image();
+      im.onload = () => {
+        drawWarpedImage(octx, im, st);
+        pending--;
+        if (pending === 0) resolve(out);
+      };
+      im.src = st.src;
+    });
+  });
+}
+
+/* ---------- キーボード：テキストエリア編集中はDelete/Backspaceを奪わない ---------- */
+// (Delete/Backspace自体はモザイク側window keydownで一元管理、hasSelection()で分岐)
+
+/* ---------- 公開API ---------- */
+window.StampLayer = {
+  setScale, reset, hasStamps, hasSelection, deleteSelected, renderOnto, placeStampAtCursor,
+};
+
 })();
 </script>
 </body>
